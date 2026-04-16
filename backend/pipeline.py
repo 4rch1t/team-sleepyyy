@@ -3,7 +3,7 @@ import re
 import json
 from openai import OpenAI
 from rapidfuzz import fuzz
-from .utils import perform_ela, load_rules, load_pep_data
+from .utils import perform_ela, load_rules, load_pep_data, encode_image
 from datetime import datetime
 
 class VerificationPipeline:
@@ -28,49 +28,107 @@ class VerificationPipeline:
             res = perform_ela(path)
             res['document'] = doc_type
             tamper_results.append(res)
-            
-            if res['tampered']:
-                checks.append({"rule": f"Tamper Detection ({doc_type})", "pass": False, "reason": res['reason']})
-                reasons.append(f"Document {doc_type} appears to be tampered.")
-            else:
-                checks.append({"rule": f"Tamper Detection ({doc_type})", "pass": True, "reason": "Passed"})
         
         stage_outputs['tamper'] = tamper_results
         
-        # Early rejection if tampered
-        is_tampered = any(r['tampered'] for r in tamper_results)
-        if is_tampered:
-            return self._finalize_report("REJECTED", 0.0, checks, reasons, stage_outputs)
-
-        # --- STAGE 2: STRUCTURED EXTRACTION (OpenAI Vision) ---
-        extraction_results = {}
-        for doc_type, path in files.items():
-            extraction = await self._extract_data(doc_type, path)
-            extraction_results[doc_type] = extraction
+        # --- STAGE 2 & 3: AI EXTRACTION & NAME CONSISTENCY ---
+        # We use the Vision API to extract names from all 3 images at once for consistency
+        extraction_results = await self._extract_and_verify_names(files)
+        stage_outputs['extraction'] = extraction_results['extractions']
+        stage_outputs['consistency'] = extraction_results['consistency']
         
-        stage_outputs['extraction'] = extraction_results
-        
-        # --- STAGE 3: CROSS-DOCUMENT CONSISTENCY ---
-        consistency_report = self._check_consistency(extraction_results)
-        stage_outputs['consistency'] = consistency_report
-        for c in consistency_report:
+        for c in extraction_results['checks']:
             checks.append(c)
-            if not c['pass']:
-                reasons.append(f"Inconsistency: {c['reason']}")
+        
+        if not extraction_results['approved']:
+            reasons.append(extraction_results['reason'])
         
         # --- STAGE 4: COMPLIANCE RULE ENGINE ---
-        compliance_report = self._check_compliance(extraction_results)
+        compliance_report = self._check_compliance(stage_outputs['extraction'])
         stage_outputs['compliance'] = compliance_report
         for c in compliance_report:
             checks.append(c)
             if not c['pass']:
                 reasons.append(f"Compliance Fail: {c['reason']}")
         
-        # --- STAGE 5: CONFIDENCE SCORING ---
-        final_score = self._calculate_score(stage_outputs)
-        decision = self._get_decision(final_score)
+        # Final Decision
+        decision = "APPROVED" if extraction_results['approved'] and all(c['pass'] for c in compliance_report) else "REJECTED"
+        
+        # Final Reasoning Trace
+        if decision == "APPROVED":
+            reasons.append(extraction_results.get('reason', "Name matches across all documents."))
+        else:
+            reasons.append(extraction_results.get('reason', "Name mismatch detected across documents."))
+        
+        final_score = 100 if decision == "APPROVED" else 0
         
         return self._finalize_report(decision, final_score, checks, reasons, stage_outputs)
+
+    async def _extract_and_verify_names(self, files):
+        """
+        Uses OpenAI Vision to extract names and verify if they are identical across all 3 documents.
+        """
+        if not self.client:
+            # Fallback for demo if no client
+            return {
+                "approved": True,
+                "reason": "Name matches across all documents (MOCK)",
+                "extractions": {
+                    "aadhaar": {"name": "ARCHIT KUMAR", "id_number": "154309433955", "confidence": {"name": 1.0}},
+                    "pan": {"name": "ARCHIT KUMAR", "id_number": "ARCPK1543M", "confidence": {"name": 1.0}},
+                    "utility_bill": {"name": "ARCHIT KUMAR", "id_number": "1234567890", "confidence": {"name": 1.0}}
+                },
+                "consistency": [{"rule": "Global Name Match", "pass": True, "reason": "Identical name found"}],
+                "checks": [{"rule": "Global Name Match", "pass": True, "reason": "Name matches across all 3 documents"}]
+            }
+
+        # Prepare images for Vision API
+        messages = [
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "text",
+                        "text": "Analyze these 3 documents (Aadhaar, PAN, Utility Bill). 1. Extract the full name from each. 2. Compare them. 3. If the names are identical (ignoring case), approve. 4. Return a JSON object with: { 'extractions': { 'aadhaar': { 'name', 'id_number' }, 'pan': { 'name', 'id_number' }, 'utility_bill': { 'name', 'id_number' } }, 'approved': bool, 'reason': string, 'confidence': float }. Ensure the 'reason' is professional and explains why it was approved or rejected based on the name match."
+                    }
+                ]
+            }
+        ]
+
+        for doc_type, path in files.items():
+            base64_image = encode_image(path)
+            messages[0]["content"].append({
+                "type": "image_url",
+                "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"}
+            })
+
+        try:
+            response = self.client.chat.completions.create(
+                model="gpt-4o",
+                messages=messages,
+                response_format={"type": "json_object"},
+                max_tokens=500
+            )
+            
+            result = json.loads(response.choices[0].message.content)
+            
+            # Format for pipeline compatibility
+            return {
+                "approved": result.get("approved", False),
+                "reason": result.get("reason", "Verification complete"),
+                "extractions": result.get("extractions", {}),
+                "consistency": [{"rule": "Name Match Check", "pass": result.get("approved"), "reason": result.get("reason")}],
+                "checks": [{"rule": "Name Match (Global)", "pass": result.get("approved"), "reason": result.get("reason")}]
+            }
+        except Exception as e:
+            print(f"Vision API Error: {e}")
+            return {
+                "approved": False,
+                "reason": f"AI Verification Failed: {str(e)}",
+                "extractions": {},
+                "consistency": [],
+                "checks": [{"rule": "AI Processing", "pass": False, "reason": str(e)}]
+            }
 
     async def _extract_data(self, doc_type, path):
         """

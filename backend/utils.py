@@ -4,7 +4,13 @@ from PIL import Image, ImageChops, ImageEnhance
 from cryptography.fernet import Fernet
 import json
 import yaml
+import base64
 from fpdf import FPDF
+
+# Image Encoding
+def encode_image(image_path):
+    with open(image_path, "rb") as image_file:
+        return base64.b64encode(image_file.read()).decode('utf-8')
 
 # ELA Tamper Detection
 def perform_ela(image_path, quality=90, scale=15):
