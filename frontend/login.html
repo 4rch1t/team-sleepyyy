@@ -1,74 +1,58 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>VerifAI - Agentic KYC/AML Login</title>
-  <link rel="stylesheet" href="base.css">
+    <meta charset="UTF-8">
+    <title>VERIFAI - LOGIN</title>
+    <link rel="stylesheet" href="base.css">
 </head>
 <body>
-
-  <div id="login-container">
-    <div class="card" style="width: 100%; max-width: 450px;">
-      <h1 class="logo"><span class="verif">VERIF</span><span class="ai">AI</span></h1>
-      <p style="margin-bottom: 2rem; color: var(--color-text-muted);">
-        Authenticate to access the KYC/AML validation pipeline.
-      </p>
-
-      <div class="form-group">
-        <label>SYSTEM STATUS</label>
-        <div style="padding: 1rem; border: 1px solid var(--neon-green); background: rgba(57, 255, 20, 0.05); font-family: 'JetBrains Mono', monospace; font-size: 0.85rem; color: var(--neon-green); margin-bottom: 2rem;">
-          > NETWORK: SECURE
-          <br>> ENDPOINT: LOCAL_NODE
-          <br>> PIPELINE: READY
+    <div class="login-container">
+        <h1 class="logo" style="font-size: 3rem; margin-bottom: 40px;">VERIFAI</h1>
+        
+        <div class="box">
+            <h2 style="margin-bottom: 30px;">AUTHENTICATION</h2>
+            
+            <!-- Google Login -->
+            <button class="google-btn" onclick="googleLogin()">
+                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="20" alt="Google">
+                CONTINUE WITH GOOGLE
+            </button>
+            
+            <div class="divider">OR</div>
+            
+            <!-- Email Login -->
+            <form id="login-form">
+                <div class="form-group" style="text-align: left;">
+                    <label>EMAIL ADDRESS</label>
+                    <input type="email" placeholder="name@company.com" required>
+                </div>
+                <div class="form-group" style="text-align: left;">
+                    <label>PASSWORD</label>
+                    <input type="password" placeholder="••••••••" required>
+                </div>
+                
+                <button type="submit" class="btn btn-primary" style="width: 100%;">ACCESS SYSTEM</button>
+            </form>
         </div>
-      </div>
-
-      <!-- Google OAuth Sign-In -->
-      <div id="g_id_onload"
-           data-client_id="154309433955-9610jtiu9752efpqo7u3j8kpg94ee4o8.apps.googleusercontent.com"
-           data-context="signin"
-           data-ux_mode="popup"
-           data-callback="handleCredentialResponse"
-           data-auto_prompt="false">
-      </div>
-
-      <div class="g_id_signin"
-           data-type="standard"
-           data-shape="rectangular"
-           data-theme="filled_black"
-           data-text="signin_with"
-           data-size="large"
-           data-logo_alignment="center"
-           data-width="400">
-      </div>
-
-      <hr style="border: none; border-top: 1px dashed var(--color-border); margin: 2rem 0;">
-
-      <!-- Developer bypass for local testing -->
-      <button onclick="devBypass()" class="btn btn-primary" style="width: 100%; text-align: center;">
-        DEV BYPASS ->
-      </button>
-
+        
+        <p style="color: #555; font-size: 0.8rem; text-transform: uppercase;">
+            SECURE ACCESS ONLY. AUTHORIZED PERSONNEL ONLY.
+        </p>
     </div>
-  </div>
 
-  <script src="https://accounts.google.com/gsi/client" async defer></script>
-  <script>
-    function handleCredentialResponse(response) {
-      console.log("Encoded JWT ID token: " + response.credential);
-      // In a real flow, you'd send this to the backend:
-      // fetch('/login/google', { method: 'POST', body: JSON.stringify({token: response.credential}), headers: {'Content-Type': 'application/json'} })
-      
-      // We will persist a mock token to localStorage and redirect
-      localStorage.setItem('verifai_auth', response.credential);
-      window.location.href = 'index.html';
-    }
+    <script>
+        function googleLogin() {
+            // Placeholder for Google OAuth redirect
+            alert("Redirecting to Google OAuth...\n(Requires GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET)");
+            // window.location.href = "/auth/google";
+        }
 
-    function devBypass() {
-      localStorage.setItem('verifai_auth', 'DEV_MOCK_TOKEN');
-      window.location.href = 'index.html';
-    }
-  </script>
+        document.getElementById('login-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            // Mock login for demo
+            localStorage.setItem('isLoggedIn', 'true');
+            window.location.href = "index.html";
+        });
+    </script>
 </body>
 </html>

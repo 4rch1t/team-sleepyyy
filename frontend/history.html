@@ -3,30 +3,40 @@
 <head>
     <meta charset="UTF-8">
     <title>VERIFAI - HISTORY</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="base.css">
+    <script>
+        if (localStorage.getItem('isLoggedIn') !== 'true') {
+            window.location.href = "login.html";
+        }
+    </script>
 </head>
 <body>
-    <div class="container">
-        <nav class="nav">
-            <a href="index.html">UPLOAD</a>
+    <nav class="nav">
+        <a href="index.html" class="logo">VERIFAI</a>
+        <div class="nav-links">
+            <a href="index.html">PROCESS</a>
             <a href="history.html">HISTORY</a>
-        </nav>
+            <a href="#" onclick="logout()">LOGOUT</a>
+        </div>
+    </nav>
 
-        <h1>VERIFICATION HISTORY</h1>
+    <div class="container">
+        <section class="hero">
+            <h1>VERIFICATION<br><span style="color:var(--accent-color)">ARCHIVE</span></h1>
+        </section>
         
         <div class="box">
             <table id="history-table">
                 <thead>
                     <tr>
                         <th>DATE</th>
-                        <th>ID</th>
                         <th>DECISION</th>
                         <th>SCORE</th>
                         <th>REASONS</th>
                     </tr>
                 </thead>
                 <tbody id="history-body">
-                    <!-- History rows will be populated here -->
+                    <!-- Data populated via JS -->
                 </tbody>
             </table>
         </div>
@@ -34,6 +44,11 @@
 
     <script>
         const API_URL = "http://localhost:8000";
+
+        function logout() {
+            localStorage.removeItem('isLoggedIn');
+            window.location.href = "login.html";
+        }
 
         async function fetchHistory() {
             try {
@@ -43,15 +58,14 @@
                 
                 tbody.innerHTML = data.map(r => `
                     <tr>
-                        <td>${new Date(r.created_at).toLocaleString()}</td>
-                        <td>${r.id}</td>
+                        <td style="font-size:0.8rem; color:#888;">${new Date(r.created_at).toLocaleString()}</td>
                         <td><span class="badge ${r.decision}">${r.decision}</span></td>
-                        <td>${r.confidence_score}%</td>
-                        <td>${r.reasons.join(', ')}</td>
+                        <td style="font-weight:900;">${r.confidence_score}%</td>
+                        <td style="font-size:0.8rem; color:#ccc;">${r.reasons.slice(0, 2).join(', ')}${r.reasons.length > 2 ? '...' : ''}</td>
                     </tr>
                 `).join('');
             } catch (err) {
-                alert('Error fetching history: ' + err.message);
+                console.error('History Error:', err);
             }
         }
 

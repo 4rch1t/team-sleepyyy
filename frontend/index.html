@@ -2,70 +2,83 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>VERIFAI - KYC & AML DOCUMENT VERIFICATION</title>
-    <link rel="stylesheet" href="style.css">
+    <title>VERIFAI - UPLOAD</title>
+    <link rel="stylesheet" href="base.css">
+    <script>
+        // Auth check
+        if (localStorage.getItem('isLoggedIn') !== 'true') {
+            window.location.href = "login.html";
+        }
+    </script>
 </head>
 <body>
-    <div class="container">
-        <nav class="nav">
-            <a href="index.html">UPLOAD</a>
+    <nav class="nav">
+        <a href="index.html" class="logo">VERIFAI</a>
+        <div class="nav-links">
+            <a href="index.html">PROCESS</a>
             <a href="history.html">HISTORY</a>
-        </nav>
+            <a href="#" onclick="logout()">LOGOUT</a>
+        </div>
+    </nav>
 
-        <h1>VERIFAI</h1>
-        <p>AI-POWERED KYC + AML VERIFICATION FOR INDIA</p>
+    <div class="container">
+        <section class="hero">
+            <h1>START NEW<br><span style="color:var(--accent-color)">VERIFICATION</span></h1>
+            <p style="color:#888; text-transform:uppercase; font-size:0.8rem; letter-spacing:2px;">AI-POWERED KYC + AML DOCUMENT VERIFICATION</p>
+        </section>
         
         <div class="box">
-            <h2>UPLOAD DOCUMENTS</h2>
-            <form id="upload-form" enctype="multipart/form-data">
+            <form id="upload-form">
                 <div class="form-group">
-                    <label for="aadhaar">AADHAAR CARD (PDF/JPG/PNG)</label>
-                    <input type="file" name="aadhaar" id="aadhaar" required>
+                    <label>AADHAAR CARD (FRONT/BACK)</label>
+                    <input type="file" name="aadhaar" required>
                 </div>
                 
                 <div class="form-group">
-                    <label for="pan">PAN CARD (PDF/JPG/PNG)</label>
-                    <input type="file" name="pan" id="pan" required>
+                    <label>PAN CARD</label>
+                    <input type="file" name="pan" required>
                 </div>
                 
                 <div class="form-group">
-                    <label for="utility_bill">UTILITY BILL (PDF/JPG/PNG - < 90 DAYS)</label>
-                    <input type="file" name="utility_bill" id="utility_bill" required>
+                    <label>UTILITY BILL (LATEST)</label>
+                    <input type="file" name="utility_bill" required>
                 </div>
                 
-                <button type="submit" id="submit-btn">PROCESS VERIFICATION</button>
+                <button type="submit" class="btn btn-primary" id="submit-btn">INITIATE 5-STAGE PIPELINE</button>
             </form>
             
-            <div id="loading">PROCESSING DOCUMENTS...</div>
+            <div id="loading" style="display:none; margin-top:20px; font-weight:bold; color:var(--accent-color);">
+                ANALYZING DOCUMENTS... [TAMPER | EXTRACT | CONSISTENCY | RULES | SCORE]
+            </div>
         </div>
 
         <div id="result-container" style="display:none;">
             <div class="box">
-                <h2>DECISION</h2>
+                <h2 style="margin-bottom:20px;">VERIFICATION RESULT</h2>
                 <div id="decision-badge" class="badge">PENDING</div>
-                <p>CONFIDENCE SCORE: <span id="conf-score">0.00</span>%</p>
+                <p style="margin-top:20px;">FINAL CONFIDENCE: <span id="conf-score" style="font-weight:900; font-size:1.5rem;">0.00</span>%</p>
                 
-                <div id="reasons-box" style="margin-top:20px;">
-                    <h3>REASONS:</h3>
-                    <ul id="reasons-list"></ul>
+                <div id="reasons-box" style="margin-top:30px; border-top: 1px solid #333; padding-top:20px;">
+                    <h3 style="font-size:0.8rem; color:#888;">REASONING TRACE:</h3>
+                    <ul id="reasons-list" style="list-style:none; padding:0; margin-top:10px;"></ul>
                 </div>
             </div>
 
-            <div class="box">
-                <h2>STAGE-BY-STAGE BREAKDOWN</h2>
-                <div id="stage-breakdown"></div>
-            </div>
+            <div id="stage-breakdown"></div>
         </div>
     </div>
 
     <script>
         const API_URL = "http://localhost:8000";
 
+        function logout() {
+            localStorage.removeItem('isLoggedIn');
+            window.location.href = "login.html";
+        }
+
         document.getElementById('upload-form').addEventListener('submit', async (e) => {
             e.preventDefault();
-            
-            const form = e.target;
-            const formData = new FormData(form);
+            const formData = new FormData(e.target);
             const submitBtn = document.getElementById('submit-btn');
             const loading = document.getElementById('loading');
             const resultContainer = document.getElementById('result-container');
@@ -80,12 +93,10 @@
                     body: formData
                 });
                 
-                if (!response.ok) throw new Error('Verification failed');
-                
                 const data = await response.json();
                 displayResult(data);
             } catch (err) {
-                alert('Error: ' + err.message);
+                alert('System Error: ' + err.message);
             } finally {
                 submitBtn.disabled = false;
                 loading.style.display = 'none';
@@ -104,35 +115,40 @@
             badge.className = `badge ${data.decision}`;
             score.innerText = data.confidence_score;
             
-            reasonsList.innerHTML = data.reasons.map(r => `<li>${r}</li>`).join('');
+            reasonsList.innerHTML = data.reasons.map(r => `<li style="margin-bottom:10px;">> ${r}</li>`).join('');
             
-            // Build stage breakdown
             let html = '';
             
             // Tamper Stage
-            html += `<div class="stage-card"><h3>STAGE 1: TAMPER DETECTION</h3>`;
+            html += `<div class="box"><h3>STAGE 1: FORENSICS (ELA)</h3>`;
             data.stage_outputs.tamper.forEach(t => {
-                html += `<div class="check-item"><span>${t.document.toUpperCase()}</span> <span class="${t.tampered ? 'fail' : 'pass'}">${t.tampered ? 'TAMPERED' : 'CLEAN'}</span></div>`;
+                html += `<div style="display:flex; justify-content:space-between; margin-top:10px;">
+                    <span>${t.document.toUpperCase()}</span> 
+                    <span class="${t.tampered ? 'REJECTED' : 'APPROVED'}" style="padding:2px 10px;">${t.tampered ? 'TAMPERED' : 'CLEAN'}</span>
+                </div>`;
             });
             html += `</div>`;
             
             // Extraction Stage
-            html += `<div class="stage-card"><h3>STAGE 2: EXTRACTION</h3>`;
+            html += `<div class="box"><h3>STAGE 2: AI EXTRACTION</h3>`;
             Object.entries(data.stage_outputs.extraction).forEach(([doc, info]) => {
-                html += `<div><strong>${doc.toUpperCase()}:</strong> ${info.name} (${info.id_number})</div>`;
+                html += `<div style="margin-top:10px; color:#ccc;">
+                    <strong>${doc.toUpperCase()}:</strong> ${info.name} | ${info.id_number}
+                </div>`;
             });
             html += `</div>`;
             
-            // Compliance & Consistency
-            html += `<div class="stage-card"><h3>STAGE 3-4: RULES & CONSISTENCY</h3>`;
+            // Rules
+            html += `<div class="box"><h3>STAGE 3-4: COMPLIANCE & RULES</h3>`;
             data.checks.forEach(c => {
-                html += `<div class="check-item"><span>${c.rule}</span> <span class="${c.pass ? 'pass' : 'fail'}">${c.pass ? 'PASS' : 'FAIL'}</span></div>`;
+                html += `<div style="display:flex; justify-content:space-between; margin-top:10px;">
+                    <span>${c.rule}</span> 
+                    <span class="${c.pass ? 'APPROVED' : 'REJECTED'}" style="padding:2px 10px;">${c.pass ? 'PASS' : 'FAIL'}</span>
+                </div>`;
             });
             html += `</div>`;
             
             breakdown.innerHTML = html;
-            
-            // Scroll to results
             container.scrollIntoView({ behavior: 'smooth' });
         }
     </script>
