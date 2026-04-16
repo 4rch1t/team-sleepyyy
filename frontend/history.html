@@ -32,6 +32,7 @@
                         <th>DATE</th>
                         <th>DECISION</th>
                         <th>REASONS</th>
+                        <th>ACTIONS</th>
                     </tr>
                 </thead>
                 <tbody id="history-body">
@@ -65,6 +66,9 @@
                         <td style="font-size:0.8rem; color:#888;">${new Date(r.created_at).toLocaleString()}</td>
                         <td><span class="badge ${r.decision}">${r.decision}</span></td>
                         <td style="font-size:0.8rem; color:#ccc;">${r.reasons.slice(0, 2).join(', ')}${r.reasons.length > 2 ? '...' : ''}</td>
+                        <td>
+                            <button class="btn btn-outline" style="padding:5px 10px; font-size:0.6rem;" onclick="window.location.href='${API_URL}/report/${r.id}/pdf'">PDF</button>
+                        </td>
                     </tr>
                 `).join('');
             } catch (err) {

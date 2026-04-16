@@ -14,3 +14,4 @@ aiofiles
 authlib
 httpx
 itsdangerous
+fpdf2

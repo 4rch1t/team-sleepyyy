@@ -2,11 +2,12 @@ import os
 import shutil
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import RedirectResponse
+from fastapi.responses import RedirectResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
 from authlib.integrations.starlette_client import OAuth
 from .pipeline import VerificationPipeline
+from .utils import generate_pdf_report
 from .models import Base, Verification, Report
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -106,6 +107,8 @@ async def verify_documents(
         verification.status = "COMPLETED"
         db.commit()
         
+        # Include report ID in response
+        report_data['id'] = report.id
         return report_data
     except Exception as e:
         verification.status = "FAILED"
@@ -148,6 +151,30 @@ async def get_report(report_id: int):
     }
     db.close()
     return result
+
+@app.get("/report/{report_id}/pdf")
+async def get_report_pdf(report_id: int):
+    db = SessionLocal()
+    report = db.query(Report).filter(Report.id == report_id).first()
+    if not report:
+        db.close()
+        raise HTTPException(status_code=404, detail="Report not found")
+    
+    report_data = {
+        "id": report.id,
+        "decision": report.decision,
+        "confidence_score": report.confidence_score,
+        "checks": report.checks,
+        "reasons": report.reasons,
+        "stage_outputs": report.stage_outputs,
+        "created_at": report.created_at.isoformat()
+    }
+    db.close()
+    
+    pdf_path = os.path.join(UPLOAD_FOLDER, f"report_{report_id}.pdf")
+    generate_pdf_report(report_data, pdf_path)
+    
+    return FileResponse(pdf_path, media_type="application/pdf", filename=f"VerifAI_Report_{report_id}.pdf")
 
 # Serve frontend files
 app.mount("/frontend", StaticFiles(directory="frontend"), name="frontend")

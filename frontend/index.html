@@ -61,7 +61,10 @@
 
         <div id="result-container" style="display:none;">
             <div class="box">
-                <h2 style="margin-bottom:20px;">VERIFICATION RESULT</h2>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                    <h2 style="margin:0;">VERIFICATION RESULT</h2>
+                    <button id="download-pdf-btn" class="btn btn-outline" style="padding:10px 20px; font-size:0.7rem; display:none;">DOWNLOAD PDF REPORT</button>
+                </div>
                 <div id="decision-badge" class="badge">PENDING</div>
                 
                 <div id="reasons-box" style="margin-top:30px; border-top: 1px solid #333; padding-top:20px;">
@@ -117,14 +120,22 @@
         function displayResult(data) {
             const container = document.getElementById('result-container');
             const badge = document.getElementById('decision-badge');
-            const score = document.getElementById('conf-score');
             const reasonsList = document.getElementById('reasons-list');
             const breakdown = document.getElementById('stage-breakdown');
+            
+            const downloadBtn = document.getElementById('download-pdf-btn');
             
             container.style.display = 'block';
             badge.innerText = data.decision;
             badge.className = `badge ${data.decision}`;
-            score.innerText = data.confidence_score;
+            
+            // Setup Download PDF
+            if (data.id) {
+                downloadBtn.style.display = 'block';
+                downloadBtn.onclick = () => {
+                    window.location.href = `${API_URL}/report/${data.id}/pdf`;
+                };
+            }
             
             reasonsList.innerHTML = data.reasons.map(r => `<li style="margin-bottom:12px; color:#ddd; font-size:0.9rem;">
                 <span style="color:var(--accent-color); margin-right:10px;">[WARN]</span>${r}

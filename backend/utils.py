@@ -4,6 +4,7 @@ from PIL import Image, ImageChops, ImageEnhance
 from cryptography.fernet import Fernet
 import json
 import yaml
+from fpdf import FPDF
 
 # ELA Tamper Detection
 def perform_ela(image_path, quality=90, scale=15):
@@ -74,3 +75,60 @@ def load_pep_data():
         with open(path, "r") as f:
             return json.load(f)
     return []
+
+def generate_pdf_report(report_data, output_path):
+    pdf = FPDF()
+    pdf.add_page()
+    
+    # Header
+    pdf.set_font("helvetica", "B", 24)
+    pdf.set_text_color(255, 77, 0) # VerifAI Orange
+    pdf.cell(0, 20, "VERIFAI REPORT", ln=True, align="C")
+    
+    pdf.set_font("helvetica", "B", 12)
+    pdf.set_text_color(0, 0, 0)
+    pdf.cell(0, 10, f"ID: {report_data.get('id', 'N/A')}", ln=True)
+    pdf.cell(0, 10, f"DECISION: {report_data.get('decision')}", ln=True)
+    pdf.cell(0, 10, f"DATE: {report_data.get('created_at', 'N/A')}", ln=True)
+    pdf.ln(10)
+    
+    # Reasoning Trace
+    pdf.set_font("helvetica", "B", 16)
+    pdf.cell(0, 10, "REASONING TRACE", ln=True)
+    pdf.set_font("helvetica", "", 10)
+    for reason in report_data.get("reasons", []):
+        pdf.multi_cell(0, 8, f"- {reason}")
+    pdf.ln(10)
+    
+    # Stage 1: Forensics
+    pdf.set_font("helvetica", "B", 16)
+    pdf.cell(0, 10, "STAGE 1: FORENSICS & TAMPER ANALYSIS", ln=True)
+    pdf.set_font("helvetica", "", 10)
+    for t in report_data.get("stage_outputs", {}).get("tamper", []):
+        status = "TAMPERED" if t.get("tamper") else "CLEAN"
+        pdf.cell(0, 8, f"{t.get('document').upper()}: {status}", ln=True)
+    pdf.ln(10)
+    
+    # Stage 2: AI Extraction
+    pdf.set_font("helvetica", "B", 16)
+    pdf.cell(0, 10, "STAGE 2: MULTI-MODAL AI EXTRACTION", ln=True)
+    pdf.set_font("helvetica", "", 10)
+    for doc, info in report_data.get("stage_outputs", {}).get("extraction", {}).items():
+        pdf.set_font("helvetica", "B", 10)
+        pdf.cell(0, 8, f"Source: {doc.upper()}", ln=True)
+        pdf.set_font("helvetica", "", 10)
+        pdf.cell(0, 8, f"Name: {info.get('name')}", ln=True)
+        pdf.cell(0, 8, f"ID: {info.get('id_number')}", ln=True)
+        pdf.ln(2)
+    pdf.ln(10)
+    
+    # Stage 3-4: Regulatory & AML Checks
+    pdf.set_font("helvetica", "B", 16)
+    pdf.cell(0, 10, "STAGE 3-4: REGULATORY & AML CHECKS", ln=True)
+    pdf.set_font("helvetica", "", 10)
+    for c in report_data.get("checks", []):
+        status = "COMPLIANT" if c.get("pass") else "VIOLATION"
+        pdf.cell(0, 8, f"{c.get('rule')}: {status}", ln=True)
+        
+    pdf.output(output_path)
+    return output_path
