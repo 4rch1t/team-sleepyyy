@@ -37,14 +37,13 @@ def perform_ela(image_path, quality=90, scale=15):
     
     os.remove(temp_path)
     
-    # Heuristic: If mean diff is high, it might be tampered or low quality
-    # For demo purposes, we'll keep it simple
-    is_tampered = mean_diff > 40.0 
+    # Convert to Python types for JSON serialization
+    is_tampered = bool(mean_diff > 40.0) 
     
     return {
         "tampered": is_tampered,
         "reason": "Localized compression inconsistencies detected" if is_tampered else "No significant tamper signatures found",
-        "confidence": 0.85 if is_tampered else 0.95
+        "confidence": float(0.85 if is_tampered else 0.95)
     }
 
 # Encryption Helpers
