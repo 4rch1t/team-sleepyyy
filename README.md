@@ -1,4 +1,5 @@
-<img width="921" height="731" alt="image" src="https://github.com/user-attachments/assets/31ddd741-9712-4fd3-9719-a737abbe1042" />
+<img width="1914" height="946" alt="image" src="https://github.com/user-attachments/assets/395f7c5c-5cc9-4d0f-ab29-f83b37eff167" />
+
 
 # VerifAI — AI-Powered KYC + AML Document Verification for India
 
