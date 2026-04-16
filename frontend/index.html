@@ -2,92 +2,152 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>VERIFAI - UPLOAD</title>
+    <title>VERIFAI - COMMAND CENTER</title>
     <link rel="stylesheet" href="base.css">
     <script>
-        // Check if coming back from OAuth
-        const urlParams = new URLSearchParams(window.location.search);
-        if (window.location.pathname.includes('index.html')) {
-            // For the demo, being on index.html after redirect counts as logged in
-            localStorage.setItem('isLoggedIn', 'true');
-        }
-
-        // Auth check
         if (localStorage.getItem('isLoggedIn') !== 'true') {
             window.location.href = "login.html";
         }
     </script>
 </head>
 <body>
-    <nav class="nav">
-        <a href="index.html" class="logo">VERIFAI</a>
-        <div class="nav-links">
-            <a href="index.html">PROCESS</a>
-            <a href="history.html">HISTORY</a>
-            <a href="#" onclick="logout()">LOGOUT</a>
-        </div>
-    </nav>
-
-    <div class="container">
-        <section class="hero">
-            <h1>START NEW<br><span style="color:var(--accent-color)">VERIFICATION</span></h1>
-            <p style="color:#888; text-transform:uppercase; font-size:0.8rem; letter-spacing:2px;">AI-POWERED KYC + AML DOCUMENT VERIFICATION</p>
-        </section>
-        
-        <div class="box" style="margin-top:40px;">
-            <form id="upload-form">
-                <div class="form-group">
-                    <label>AADHAAR CARD (FRONT/BACK)</label>
-                    <input type="file" name="aadhaar" required>
-                </div>
-                
-                <div class="form-group">
-                    <label>PAN CARD</label>
-                    <input type="file" name="pan" required>
-                </div>
-                
-                <div class="form-group">
-                    <label>UTILITY BILL (LATEST)</label>
-                    <input type="file" name="utility_bill" required>
-                </div>
-                
-                <button type="submit" class="btn btn-primary" id="submit-btn">INITIATE 5-STAGE PIPELINE</button>
-            </form>
-            
-            <div id="loading" style="display:none; margin-top:20px; font-weight:bold; color:var(--accent-color);">
-                ANALYZING DOCUMENTS... [TAMPER | EXTRACT | CONSISTENCY | RULES | SCORE]
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="operator-profile">
+            <div class="operator-icon">A</div>
+            <div>
+                <div style="font-size: 0.7rem; font-weight: 900;">OPERATOR_01</div>
+                <div style="font-size: 0.55rem; color: var(--accent-orange);">STATUS: ENCRYPTED</div>
             </div>
         </div>
 
-        <div id="result-container" style="display:none;">
-            <div class="box">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-                    <h2 style="margin:0;">VERIFICATION RESULT</h2>
-                    <button id="download-pdf-btn" class="btn btn-outline" style="padding:10px 20px; font-size:0.7rem; display:none;">DOWNLOAD PDF REPORT</button>
+        <nav style="flex: 1;">
+            <a href="index.html" class="nav-item active">DASHBOARD</a>
+            <a href="index.html#scan" class="nav-item">EVIDENCE_SCAN</a>
+            <a href="history.html" class="nav-item">FORENSIC_ARCHIVE</a>
+            <a href="#" class="nav-item">THREAT_MODEL</a>
+            <a href="#" class="nav-item">SYSTEM_LOGS</a>
+        </nav>
+
+        <a href="#" onclick="logout()" class="nav-item" style="border-top: 1px solid var(--border-gray);">LOGOUT</a>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-viewport">
+        <header class="top-bar">
+            <div class="logo-text">VERIFAI</div>
+            <div style="display: flex; gap: 20px; font-size: 0.65rem; font-weight: 900; color: var(--text-gray);">
+                <span>NETWORK: ONLINE</span>
+                <span style="color: var(--success-green);">SECURE: AES-256</span>
+            </div>
+        </header>
+
+        <div class="dashboard-grid">
+            <!-- Left Column: Ledger & Charts -->
+            <div style="display: flex; flex-direction: column; gap: 25px;">
+                <div class="content-box">
+                    <div class="section-path">/ROOT/ADMIN_DASHBOARD/SUBMISSIONS</div>
+                    <h1 class="section-title">FORENSIC_LEDGER</h1>
+                    
+                    <table class="ledger-table">
+                        <thead>
+                            <tr>
+                                <th>TIMESTAMP</th>
+                                <th>SUBMISSION_ID</th>
+                                <th>ORIGIN_NODE</th>
+                                <th>STATUS</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ledger-body">
+                            <!-- Populated dynamically -->
+                            <tr>
+                                <td>2023.10.24 14:02:11</td>
+                                <td>XF-9920-ALPHA</td>
+                                <td>NODE_SF_09</td>
+                                <td><span class="status-badge status-approved">APPROVED</span></td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
-                <div id="decision-badge" class="badge">PENDING</div>
-                
-                <div id="reasons-box" style="margin-top:30px; border-top: 1px solid #333; padding-top:20px;">
-                    <h3 style="font-size:0.8rem; color:#888;">REASONING TRACE:</h3>
-                    <ul id="reasons-list" style="list-style:none; padding:0; margin-top:10px;"></ul>
+
+                <div id="scan" class="content-box">
+                    <div class="section-path">/ROOT/SYSTEM/SCAN_ENGINE</div>
+                    <h2 class="section-title">EVIDENCE_SCAN</h2>
+                    <form id="upload-form">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                            <div class="form-group">
+                                <label>AADHAAR_DOCUMENT</label>
+                                <input type="file" name="aadhaar" required>
+                            </div>
+                            <div class="form-group">
+                                <label>PAN_DOCUMENT</label>
+                                <input type="file" name="pan" required>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>UTILITY_BILL_EVIDENCE</label>
+                            <input type="file" name="utility_bill" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary" id="submit-btn" style="width: 100%; margin-top: 10px;">INITIATE_PIPELINE</button>
+                    </form>
+                    <div id="loading" style="display:none; margin-top:20px; font-weight:bold; color:var(--accent-orange); font-size: 0.7rem;">
+                        [BUSY] EXECUTING_REASONING_PIPELINE...
+                    </div>
                 </div>
             </div>
 
-            <div id="stage-breakdown"></div>
+            <!-- Right Column: Stats -->
+            <div style="display: flex; flex-direction: column; gap: 25px;">
+                <div style="display: grid; grid-template-columns: 1fr; gap: 20px;">
+                    <div class="stat-card">
+                        <span class="stat-val">12,840</span>
+                        <span class="stat-label">ACTIVE_SCANS</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-val" style="color: var(--accent-orange);">88.2%</span>
+                        <span class="stat-label">NETWORK_LOAD</span>
+                    </div>
+                </div>
+
+                <div class="integrity-card">
+                    <div style="font-size: 5rem; font-weight: 900; line-height: 1;">94%</div>
+                    <div style="font-size: 0.8rem; font-weight: 900; letter-spacing: 2px;">INTEGRITY_VERIFIED</div>
+                </div>
+
+                <div id="result-container" style="display:none;" class="content-box">
+                    <h3 style="font-size: 0.8rem; margin-bottom: 15px;">PIPELINE_RESULT</h3>
+                    <div id="decision-badge" class="status-badge" style="display: inline-block; margin-bottom: 15px;">PENDING</div>
+                    <div id="reasons-list" style="font-size: 0.7rem; color: var(--text-gray); line-height: 1.8;"></div>
+                    <button id="download-pdf-btn" class="btn" style="width: 100%; margin-top: 20px; font-size: 0.65rem;">DOWNLOAD_LEDGER_ENTRY</button>
+                </div>
+            </div>
         </div>
-    </div>
+    </main>
 
     <script>
         const API_URL = "http://localhost:8000";
 
-        // Protocol check
-        if (window.location.protocol === 'file:') {
-            window.location.href = "http://localhost:8000/";
-        }
-
         function logout() {
             localStorage.removeItem('isLoggedIn');
             window.location.href = "login.html";
+        }
+
+        async function fetchLedger() {
+            try {
+                const response = await fetch(`${API_URL}/history`);
+                const data = await response.json();
+                const tbody = document.getElementById('ledger-body');
+                if (data.length > 0) {
+                    tbody.innerHTML = data.slice(0, 5).map(r => `
+                        <tr>
+                            <td>${new Date(r.created_at).toLocaleString()}</td>
+                            <td>XF-${1000 + r.id}-BETA</td>
+                            <td>NODE_IN_0${r.id % 9}</td>
+                            <td><span class="status-badge status-${r.decision.toLowerCase()}">${r.decision}</span></td>
+                        </tr>
+                    `).join('');
+                }
+            } catch (err) { console.error(err); }
         }
 
         document.getElementById('upload-form').addEventListener('submit', async (e) => {
@@ -106,11 +166,11 @@
                     method: 'POST',
                     body: formData
                 });
-                
                 const data = await response.json();
                 displayResult(data);
+                fetchLedger();
             } catch (err) {
-                alert('System Error: ' + err.message);
+                alert('CRITICAL_SYSTEM_ERROR');
             } finally {
                 submitBtn.disabled = false;
                 loading.style.display = 'none';
@@ -121,62 +181,21 @@
             const container = document.getElementById('result-container');
             const badge = document.getElementById('decision-badge');
             const reasonsList = document.getElementById('reasons-list');
-            const breakdown = document.getElementById('stage-breakdown');
-            
             const downloadBtn = document.getElementById('download-pdf-btn');
             
             container.style.display = 'block';
             badge.innerText = data.decision;
-            badge.className = `badge ${data.decision}`;
+            badge.className = `status-badge status-${data.decision.toLowerCase()}`;
             
-            // Setup Download PDF
+            reasonsList.innerHTML = data.reasons.map(r => `> ${r}`).join('<br>');
+            
             if (data.id) {
-                downloadBtn.style.display = 'block';
-                downloadBtn.onclick = () => {
-                    window.location.href = `${API_URL}/report/${data.id}/pdf`;
-                };
+                downloadBtn.onclick = () => window.location.href = `${API_URL}/report/${data.id}/pdf`;
             }
-            
-            reasonsList.innerHTML = data.reasons.map(r => `<li style="margin-bottom:12px; color:#ddd; font-size:0.9rem;">
-                <span style="color:var(--accent-color); margin-right:10px;">[WARN]</span>${r}
-            </li>`).join('');
-            
-            let html = '';
-            
-            // Tamper Stage
-            html += `<div class="stage-card"><h3>STAGE 1: FORENSICS & TAMPER ANALYSIS</h3>`;
-            data.stage_outputs.tamper.forEach(t => {
-                html += `<div class="data-row">
-                    <span class="data-label">${t.document}</span> 
-                    <span class="${t.tampered ? 'REJECTED' : 'APPROVED'}">${t.tampered ? 'DETECTION POSITIVE' : 'PASSED ELA'}</span>
-                </div>`;
-            });
-            html += `</div>`;
-            
-            // Extraction Stage
-            html += `<div class="stage-card"><h3>STAGE 2: MULTI-MODAL AI EXTRACTION</h3>`;
-            Object.entries(data.stage_outputs.extraction).forEach(([doc, info]) => {
-                html += `<div style="margin-bottom:20px; border-bottom:1px solid #222; padding-bottom:10px;">
-                    <div class="data-row"><span class="data-label">SOURCE</span><span class="data-value">${doc.toUpperCase()}</span></div>
-                    <div class="data-row"><span class="data-label">NAME</span><span class="data-value">${info.name}</span></div>
-                    <div class="data-row"><span class="data-label">ID</span><span class="data-value">${info.id_number}</span></div>
-                </div>`;
-            });
-            html += `</div>`;
-            
-            // Rules
-            html += `<div class="stage-card"><h3>STAGE 3-4: REGULATORY & AML CHECKS</h3>`;
-            data.checks.forEach(c => {
-                html += `<div class="data-row">
-                    <span class="data-label">${c.rule}</span> 
-                    <span class="${c.pass ? 'APPROVED' : 'REJECTED'}">${c.pass ? 'COMPLIANT' : 'VIOLATION'}</span>
-                </div>`;
-            });
-            html += `</div>`;
-            
-            breakdown.innerHTML = html;
             container.scrollIntoView({ behavior: 'smooth' });
         }
+
+        fetchLedger();
     </script>
 </body>
 </html>
