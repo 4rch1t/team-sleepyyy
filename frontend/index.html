@@ -147,6 +147,12 @@
                             </div>
                             <button id="download-pdf-btn" class="btn btn-outline" style="padding:15px 30px;">GENERATE_PDF_LEDGER</button>
                         </div>
+
+                        <!-- Executive Summary (NEW) -->
+                        <div id="executive-summary-box" style="margin-top:20px; padding: 20px; background: rgba(255, 77, 0, 0.05); border-left: 4px solid var(--accent-color); display:none;">
+                            <h3 style="font-size:0.7rem; color:var(--accent-color); margin-bottom:10px; letter-spacing:1px;">AI_EXECUTIVE_SUMMARY:</h3>
+                            <p id="executive-summary-text" style="font-family: monospace; font-size: 0.9rem; line-height: 1.5; color: #eee; margin: 0;"></p>
+                        </div>
                         
                         <div id="reasons-box" style="margin-top:30px; border-top: 1px solid #333; padding-top:20px;">
                             <h3 style="font-size:0.8rem; color:#888;">AI_REASONING_ENGINE:</h3>
@@ -385,6 +391,10 @@
             const breakdown = document.getElementById('stage-breakdown');
             const downloadBtn = document.getElementById('download-pdf-btn');
             
+            // AI Summary elements
+            const summaryBox = document.getElementById('executive-summary-box');
+            const summaryText = document.getElementById('executive-summary-text');
+
             container.style.display = 'block';
             title.innerText = data.decision;
             title.className = data.decision;
@@ -392,6 +402,14 @@
             // Show certainty score
             const score = data.confidence_score || 0;
             confidenceDisplay.innerText = `CONFIDENCE: ${score.toFixed(1)}%`;
+
+            // Display AI Summary
+            if (data.stage_outputs && data.stage_outputs.executive_summary) {
+                summaryBox.style.display = 'block';
+                summaryText.innerText = data.stage_outputs.executive_summary;
+            } else {
+                summaryBox.style.display = 'none';
+            }
             
             if (data.id) {
                 downloadBtn.style.display = 'block';
@@ -438,6 +456,16 @@
                     </div>`;
                 });
                 html += `</div>`;
+            }
+
+            // AI Risk Analysis (NEW)
+            if (data.stage_outputs.risk_analysis) {
+                const risk = data.stage_outputs.risk_analysis;
+                html += `<div class="stage-card" style="border-left-color: ${risk.risk_score > 40 ? 'var(--danger-color)' : 'var(--success-color)'}">
+                    <h3>STAGE_04_AI_RISK_ANALYSIS</h3>
+                    <div class="data-row"><span class="data-label">RISK_SCORE</span><span class="data-value" style="color: ${risk.risk_score > 40 ? 'red' : 'green'}">${risk.risk_score}/100</span></div>
+                    <div class="data-row"><span class="data-label">FORENSIC_TAG</span><span class="data-value">${risk.forensic_summary.split('.')[0]}</span></div>
+                </div>`;
             }
             
             breakdown.innerHTML = html;

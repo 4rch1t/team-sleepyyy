@@ -161,7 +161,20 @@ def generate_pdf_report(report_data, output_path):
         pdf.cell(100, 10, f"REPORT ID: {report_data.get('id', 'N/A')}", ln=False)
         pdf.cell(0, 10, f"GENERATED ON: {report_data.get('created_at', 'N/A')}", ln=True, align="R")
         
-        pdf.ln(10)
+        pdf.ln(5)
+
+        # 0. AI EXECUTIVE SUMMARY (NEW)
+        stage_outputs = report_data.get("stage_outputs", {})
+        if not isinstance(stage_outputs, dict):
+            stage_outputs = {}
+            
+        exec_summary = stage_outputs.get("executive_summary")
+        if exec_summary:
+            pdf.set_fill_color(245, 245, 245)
+            pdf.set_draw_color(200, 200, 200)
+            pdf.set_font("helvetica", "BI", 10)
+            pdf.multi_cell(0, 8, f"AI_EXECUTIVE_SUMMARY: {clean_text(exec_summary)}", border=1, align="L", fill=True)
+            pdf.ln(10)
         
         # Section Styling Helper
         def add_section_header(title):
