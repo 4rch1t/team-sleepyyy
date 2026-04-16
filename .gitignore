@@ -1,8 +1,19 @@
+# Environment Variables
 .env
+
+# Database
+*.db
+*.sqlite3
+
+# Uploads and temporary files
+uploads/
+*_temp.jpg
+
+# Python cache
 __pycache__/
-*.pyc
-node_modules/
-dist/
-build/
-postgres_data/
+*.py[cod]
+*$py.class
+
+# OS files
 .DS_Store
+Thumbs.db

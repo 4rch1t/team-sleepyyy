@@ -1,0 +1,10 @@
+# VerifAI Compliance Rules for India
+pan_regex: "^[A-Z]{5}[0-9]{4}[A-Z]{1}$"
+aadhaar_digits: 12
+utility_bill_max_days: 90
+name_match_threshold: 80 # Fuzzy match score
+min_confidence_score: 0.75 # Field-level extraction confidence
+decision_thresholds:
+  approved: 85
+  escalated: 60
+  rejected: 0

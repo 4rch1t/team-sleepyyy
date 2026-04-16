@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>VERIFAI - HISTORY</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <nav class="nav">
+            <a href="index.html">UPLOAD</a>
+            <a href="history.html">HISTORY</a>
+        </nav>
+
+        <h1>VERIFICATION HISTORY</h1>
+        
+        <div class="box">
+            <table id="history-table">
+                <thead>
+                    <tr>
+                        <th>DATE</th>
+                        <th>ID</th>
+                        <th>DECISION</th>
+                        <th>SCORE</th>
+                        <th>REASONS</th>
+                    </tr>
+                </thead>
+                <tbody id="history-body">
+                    <!-- History rows will be populated here -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = "http://localhost:8000";
+
+        async function fetchHistory() {
+            try {
+                const response = await fetch(`${API_URL}/history`);
+                const data = await response.json();
+                const tbody = document.getElementById('history-body');
+                
+                tbody.innerHTML = data.map(r => `
+                    <tr>
+                        <td>${new Date(r.created_at).toLocaleString()}</td>
+                        <td>${r.id}</td>
+                        <td><span class="badge ${r.decision}">${r.decision}</span></td>
+                        <td>${r.confidence_score}%</td>
+                        <td>${r.reasons.join(', ')}</td>
+                    </tr>
+                `).join('');
+            } catch (err) {
+                alert('Error fetching history: ' + err.message);
+            }
+        }
+
+        fetchHistory();
+    </script>
+</body>
+</html>

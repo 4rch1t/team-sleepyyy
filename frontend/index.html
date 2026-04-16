@@ -1,15 +1,140 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>VerifAI | KYC Agent</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;800;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
-  </body>
+<head>
+    <meta charset="UTF-8">
+    <title>VERIFAI - KYC & AML DOCUMENT VERIFICATION</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <nav class="nav">
+            <a href="index.html">UPLOAD</a>
+            <a href="history.html">HISTORY</a>
+        </nav>
+
+        <h1>VERIFAI</h1>
+        <p>AI-POWERED KYC + AML VERIFICATION FOR INDIA</p>
+        
+        <div class="box">
+            <h2>UPLOAD DOCUMENTS</h2>
+            <form id="upload-form" enctype="multipart/form-data">
+                <div class="form-group">
+                    <label for="aadhaar">AADHAAR CARD (PDF/JPG/PNG)</label>
+                    <input type="file" name="aadhaar" id="aadhaar" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="pan">PAN CARD (PDF/JPG/PNG)</label>
+                    <input type="file" name="pan" id="pan" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="utility_bill">UTILITY BILL (PDF/JPG/PNG - < 90 DAYS)</label>
+                    <input type="file" name="utility_bill" id="utility_bill" required>
+                </div>
+                
+                <button type="submit" id="submit-btn">PROCESS VERIFICATION</button>
+            </form>
+            
+            <div id="loading">PROCESSING DOCUMENTS...</div>
+        </div>
+
+        <div id="result-container" style="display:none;">
+            <div class="box">
+                <h2>DECISION</h2>
+                <div id="decision-badge" class="badge">PENDING</div>
+                <p>CONFIDENCE SCORE: <span id="conf-score">0.00</span>%</p>
+                
+                <div id="reasons-box" style="margin-top:20px;">
+                    <h3>REASONS:</h3>
+                    <ul id="reasons-list"></ul>
+                </div>
+            </div>
+
+            <div class="box">
+                <h2>STAGE-BY-STAGE BREAKDOWN</h2>
+                <div id="stage-breakdown"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = "http://localhost:8000";
+
+        document.getElementById('upload-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const form = e.target;
+            const formData = new FormData(form);
+            const submitBtn = document.getElementById('submit-btn');
+            const loading = document.getElementById('loading');
+            const resultContainer = document.getElementById('result-container');
+            
+            submitBtn.disabled = true;
+            loading.style.display = 'block';
+            resultContainer.style.display = 'none';
+
+            try {
+                const response = await fetch(`${API_URL}/verify`, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (!response.ok) throw new Error('Verification failed');
+                
+                const data = await response.json();
+                displayResult(data);
+            } catch (err) {
+                alert('Error: ' + err.message);
+            } finally {
+                submitBtn.disabled = false;
+                loading.style.display = 'none';
+            }
+        });
+
+        function displayResult(data) {
+            const container = document.getElementById('result-container');
+            const badge = document.getElementById('decision-badge');
+            const score = document.getElementById('conf-score');
+            const reasonsList = document.getElementById('reasons-list');
+            const breakdown = document.getElementById('stage-breakdown');
+            
+            container.style.display = 'block';
+            badge.innerText = data.decision;
+            badge.className = `badge ${data.decision}`;
+            score.innerText = data.confidence_score;
+            
+            reasonsList.innerHTML = data.reasons.map(r => `<li>${r}</li>`).join('');
+            
+            // Build stage breakdown
+            let html = '';
+            
+            // Tamper Stage
+            html += `<div class="stage-card"><h3>STAGE 1: TAMPER DETECTION</h3>`;
+            data.stage_outputs.tamper.forEach(t => {
+                html += `<div class="check-item"><span>${t.document.toUpperCase()}</span> <span class="${t.tampered ? 'fail' : 'pass'}">${t.tampered ? 'TAMPERED' : 'CLEAN'}</span></div>`;
+            });
+            html += `</div>`;
+            
+            // Extraction Stage
+            html += `<div class="stage-card"><h3>STAGE 2: EXTRACTION</h3>`;
+            Object.entries(data.stage_outputs.extraction).forEach(([doc, info]) => {
+                html += `<div><strong>${doc.toUpperCase()}:</strong> ${info.name} (${info.id_number})</div>`;
+            });
+            html += `</div>`;
+            
+            // Compliance & Consistency
+            html += `<div class="stage-card"><h3>STAGE 3-4: RULES & CONSISTENCY</h3>`;
+            data.checks.forEach(c => {
+                html += `<div class="check-item"><span>${c.rule}</span> <span class="${c.pass ? 'pass' : 'fail'}">${c.pass ? 'PASS' : 'FAIL'}</span></div>`;
+            });
+            html += `</div>`;
+            
+            breakdown.innerHTML = html;
+            
+            // Scroll to results
+            container.scrollIntoView({ behavior: 'smooth' });
+        }
+    </script>
+</body>
 </html>
