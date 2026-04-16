@@ -1,0 +1,34 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-dark text-white font-body m-0 p-0;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-display text-white uppercase tracking-wider font-bold;
+  }
+
+  /* Sharp corners only constraint globally */
+  *, ::before, ::after {
+    border-radius: 0 !important;
+  }
+}
+
+.card-sharp {
+  @apply border border-neutral-800 bg-black shadow-none p-6;
+}
+
+.btn-primary {
+  @apply bg-accent text-white px-6 py-2 font-display uppercase tracking-widest hover:bg-orange-600 transition-colors border border-accent hover:border-orange-600;
+}
+
+.btn-secondary {
+  @apply bg-transparent text-white px-6 py-2 font-display uppercase tracking-widest border border-neutral-600 hover:border-white transition-colors;
+}
+
+.input-sharp {
+  @apply bg-neutral-900 border border-neutral-700 text-white px-4 py-2 focus:outline-none focus:border-accent transition-colors font-body;
+}

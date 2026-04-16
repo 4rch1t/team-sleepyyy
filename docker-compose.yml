@@ -1,0 +1,44 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: verifai
+      POSTGRES_USER: verifai
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - verifai_net
+
+  backend:
+    build: ./backend
+    environment:
+      DATABASE_URL: postgresql://verifai:${POSTGRES_PASSWORD}@postgres:5432/verifai
+      SECRET_KEY: ${SECRET_KEY}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY}
+    depends_on:
+      - postgres
+    networks:
+      - verifai_net
+    ports:
+      - "8000:8000"
+
+  frontend:
+    build: ./frontend
+    environment:
+      VITE_API_URL: http://localhost:8000
+    depends_on:
+      - backend
+    networks:
+      - verifai_net
+    ports:
+      - "5173:5173"
+
+networks:
+  verifai_net:
+
+volumes:
+  postgres_data:
