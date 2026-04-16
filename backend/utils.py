@@ -112,6 +112,9 @@ def generate_pdf_report(report_data, output_path):
         # Text cleaning helper to avoid FPDF encoding errors
         def clean_text(text):
             if text is None: return "N/A"
+            # Handle list/dict types that might come from safe_decrypt
+            if isinstance(text, (list, dict)):
+                text = json.dumps(text)
             # Remove characters that might crash FPDF default fonts
             return str(text).encode('latin-1', 'replace').decode('latin-1')
         
@@ -228,8 +231,8 @@ def generate_pdf_report(report_data, output_path):
         for t in tamper_data:
             if not isinstance(t, dict): continue
             doc = str(t.get('document', 'N/A')).upper()
-            status = "TAMPERED" if t.get("tamper") else "CLEAN"
-            result = "FAIL" if t.get("tamper") else "PASS"
+            status = "PASS" if not t.get("tamper") else "FAIL"
+            result = "PASS" if not t.get("tamper") else "FAIL"
             pdf.cell(60, 10, clean_text(doc), 1, 0, "C")
             pdf.cell(60, 10, clean_text(status), 1, 0, "C")
             pdf.cell(70, 10, clean_text(result), 1, 1, "C")
@@ -245,17 +248,61 @@ def generate_pdf_report(report_data, output_path):
             
             pdf.set_font("helvetica", "B", 10)
             pdf.cell(40, 8, "FIELD", 1, 0, "C")
-            pdf.cell(150, 8, "EXTRACTED VALUE", 1, 1, "C")
+            pdf.cell(110, 8, "EXTRACTED VALUE", 1, 0, "C")
+            pdf.cell(40, 8, "STATUS", 1, 1, "C")
             
             pdf.set_font("helvetica", "", 10)
-            pdf.cell(40, 8, "NAME", 1, 0, "L")
-            pdf.cell(150, 8, str(info.get('name', 'N/A')), 1, 1, "L")
-            pdf.cell(40, 8, "ID NUMBER", 1, 0, "L")
-            pdf.cell(150, 8, str(info.get('id_number', 'N/A')), 1, 1, "L")
-            pdf.ln(5)
+            for field, value in info.items():
+                if field in ["confidence", "document_type"]: continue
+                pdf.cell(40, 8, clean_text(field.upper()), 1, 0, "C")
+                pdf.cell(110, 8, clean_text(value), 1, 0, "C")
+                pdf.cell(40, 8, "PASS", 1, 1, "C")
+            pdf.ln(3)
+        pdf.ln(5)
+
+        # 5. DOCUMENT EVIDENCE
+        document_paths = report_data.get("document_paths", {})
+        if document_paths:
+            pdf.add_page()
+            add_section_header("5. DOCUMENT EVIDENCE")
+            
+            x_start = 10
+            y_start = pdf.get_y()
+            img_width = 90
+            img_height = 60
+            
+            count = 0
+            for doc_type, path in document_paths.items():
+                if os.path.exists(path):
+                    # Check if we need a new page
+                    if pdf.get_y() + img_height > 270:
+                        pdf.add_page()
+                        y_start = 20
+                    
+                    pdf.set_font("helvetica", "B", 10)
+                    pdf.cell(0, 8, f"EVIDENCE: {doc_type.upper()}", ln=True)
+                    
+                    # Add image
+                    try:
+                        # Convert image to RGB if it's not (FPDF requirement)
+                        img = Image.open(path)
+                        if img.mode != 'RGB':
+                            img = img.convert('RGB')
+                            rgb_path = f"{path}_rgb.jpg"
+                            img.save(rgb_path, "JPEG")
+                            pdf.image(rgb_path, x=10, w=img_width)
+                            os.remove(rgb_path)
+                        else:
+                            pdf.image(path, x=10, w=img_width)
+                    except Exception as e:
+                        pdf.set_font("helvetica", "I", 8)
+                        pdf.cell(0, 8, f"Error loading image: {str(e)}", ln=True)
+                    
+                    pdf.ln(10)
+                    count += 1
         
-        # 5. STAGE 3-4: REGULATORY
-        add_section_header("5. STAGE 3-4: REGULATORY & AML COMPLIANCE")
+        # 6. STAGE 3-4: REGULATORY
+        add_section_header("6. STAGE 3-4: REGULATORY & AML COMPLIANCE")
         pdf.set_font("helvetica", "B", 10)
         pdf.cell(120, 10, "COMPLIANCE RULE", 1, 0, "C")
         pdf.cell(70, 10, "STATUS", 1, 1, "C")
@@ -267,7 +314,7 @@ def generate_pdf_report(report_data, output_path):
             
         for c in checks:
             if not isinstance(c, dict): continue
-            status = "COMPLIANT" if c.get("pass") else "VIOLATION"
+            status = "PASS" if c.get("pass") else "FAIL"
             pdf.cell(120, 10, clean_text(c.get('rule', 'N/A')), 1, 0, "L")
             pdf.cell(70, 10, clean_text(status), 1, 1, "C")
             

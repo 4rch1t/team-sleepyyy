@@ -81,12 +81,72 @@
         </main>
     </div>
 
+    <!-- Chatbot UI -->
+    <div class="chatbot-container minimized" id="chatbot">
+        <div class="chatbot-header" onclick="toggleChat()">
+            <h4>VERIFAI_ASSISTANT</h4>
+            <span id="chat-toggle-icon">+</span>
+        </div>
+        <div class="chatbot-messages" id="chat-messages">
+            <div class="chat-msg ai">SYSTEM_READY. How can I assist with the ledger today?</div>
+        </div>
+        <div class="chatbot-input-area">
+            <input type="text" id="chat-input" placeholder="Query ledger..." onkeypress="if(event.key==='Enter') sendMessage()">
+            <button onclick="sendMessage()">SEND</button>
+        </div>
+    </div>
+
     <script>
         const API_URL = "http://localhost:8000";
 
         function logout() {
             localStorage.removeItem('isLoggedIn');
             window.location.href = "login.html";
+        }
+
+        // Chatbot Logic
+        function toggleChat() {
+            const chatbot = document.getElementById('chatbot');
+            const icon = document.getElementById('chat-toggle-icon');
+            chatbot.classList.toggle('minimized');
+            icon.innerText = chatbot.classList.contains('minimized') ? '+' : '-';
+        }
+
+        async function sendMessage() {
+            const input = document.getElementById('chat-input');
+            const messages = document.getElementById('chat-messages');
+            const text = input.value.trim();
+            
+            if (!text) return;
+
+            // Add user message
+            const userDiv = document.createElement('div');
+            userDiv.className = 'chat-msg user';
+            userDiv.innerText = text;
+            messages.appendChild(userDiv);
+            input.value = '';
+            messages.scrollTop = messages.scrollHeight;
+
+            // Add loading message
+            const loadingDiv = document.createElement('div');
+            loadingDiv.className = 'chat-msg ai';
+            loadingDiv.innerText = 'ANALYZING_ARCHIVE...';
+            messages.appendChild(loadingDiv);
+            messages.scrollTop = messages.scrollHeight;
+
+            try {
+                const response = await fetch(`${API_URL}/chat`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: text })
+                });
+                
+                const data = await response.json();
+                loadingDiv.innerText = data.response;
+            } catch (err) {
+                loadingDiv.innerText = 'ERROR: Chat engine offline.';
+            }
+            messages.scrollTop = messages.scrollHeight;
         }
 
         async function fetchHistory() {
