@@ -31,7 +31,6 @@
                     <tr>
                         <th>DATE</th>
                         <th>DECISION</th>
-                        <th>SCORE</th>
                         <th>REASONS</th>
                     </tr>
                 </thead>
@@ -65,7 +64,6 @@
                     <tr>
                         <td style="font-size:0.8rem; color:#888;">${new Date(r.created_at).toLocaleString()}</td>
                         <td><span class="badge ${r.decision}">${r.decision}</span></td>
-                        <td style="font-weight:900;">${r.confidence_score}%</td>
                         <td style="font-size:0.8rem; color:#ccc;">${r.reasons.slice(0, 2).join(', ')}${r.reasons.length > 2 ? '...' : ''}</td>
                     </tr>
                 `).join('');

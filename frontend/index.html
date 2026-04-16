@@ -34,21 +34,6 @@
             <p style="color:#888; text-transform:uppercase; font-size:0.8rem; letter-spacing:2px;">AI-POWERED KYC + AML DOCUMENT VERIFICATION</p>
         </section>
         
-        <div class="stat-grid">
-            <div class="stat-box">
-                <span class="stat-val">128</span>
-                <span class="stat-label">TOTAL VERIFICATIONS</span>
-            </div>
-            <div class="stat-box">
-                <span class="stat-val">94.2%</span>
-                <span class="stat-label">SYSTEM CONFIDENCE</span>
-            </div>
-            <div class="stat-box">
-                <span class="stat-val">0.8s</span>
-                <span class="stat-label">AVG PROCESSING TIME</span>
-            </div>
-        </div>
-
         <div class="box" style="margin-top:40px;">
             <form id="upload-form">
                 <div class="form-group">
@@ -78,7 +63,6 @@
             <div class="box">
                 <h2 style="margin-bottom:20px;">VERIFICATION RESULT</h2>
                 <div id="decision-badge" class="badge">PENDING</div>
-                <p style="margin-top:20px;">FINAL CONFIDENCE: <span id="conf-score" style="font-weight:900; font-size:1.5rem;">0.00</span>%</p>
                 
                 <div id="reasons-box" style="margin-top:30px; border-top: 1px solid #333; padding-top:20px;">
                     <h3 style="font-size:0.8rem; color:#888;">REASONING TRACE:</h3>
@@ -165,7 +149,6 @@
                     <div class="data-row"><span class="data-label">SOURCE</span><span class="data-value">${doc.toUpperCase()}</span></div>
                     <div class="data-row"><span class="data-label">NAME</span><span class="data-value">${info.name}</span></div>
                     <div class="data-row"><span class="data-label">ID</span><span class="data-value">${info.id_number}</span></div>
-                    <div class="data-row"><span class="data-label">CONFIDENCE</span><span class="data-value" style="color:var(--accent-color)">${(info.confidence.name * 100).toFixed(1)}%</span></div>
                 </div>`;
             });
             html += `</div>`;
