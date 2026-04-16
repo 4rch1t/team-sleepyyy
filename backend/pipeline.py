@@ -83,21 +83,39 @@ class VerificationPipeline:
             }
 
         # Prepare images for Vision API
+        # We need to be very explicit for ID documents to avoid safety refusals
+        system_prompt = "You are a specialized KYC (Know Your Customer) document verification agent. Your goal is to extract identity information from official documents (Aadhaar, PAN, Utility Bill) for a secure, authorized banking verification process."
+        
+        user_prompt = """Analyze these 3 images (Aadhaar, PAN, Utility Bill).
+1. Extract the full name from each document exactly as it appears.
+2. Extract the ID number (Aadhaar/PAN) or Account number (Utility Bill).
+3. Compare the names across all 3 documents.
+4. If the names match (ignoring case), set 'approved' to true.
+5. If any name is different, set 'approved' to false and specify which document failed.
+6. Return a JSON object ONLY with this structure: 
+{ 
+  "extractions": { 
+    "aadhaar": { "name": "...", "id_number": "..." }, 
+    "pan": { "name": "...", "id_number": "..." }, 
+    "utility_bill": { "name": "...", "id_number": "..." } 
+  }, 
+  "approved": bool, 
+  "reason": "Clear explanation of the name match or mismatch" 
+}"""
+
         messages = [
+            {"role": "system", "content": system_prompt},
             {
                 "role": "user",
                 "content": [
-                    {
-                        "type": "text",
-                        "text": "Analyze these 3 documents (Aadhaar, PAN, Utility Bill). 1. Extract the full name from each. 2. Compare them. 3. If the names are identical (ignoring case), approve. 4. Return a JSON object with: { 'extractions': { 'aadhaar': { 'name', 'id_number' }, 'pan': { 'name', 'id_number' }, 'utility_bill': { 'name', 'id_number' } }, 'approved': bool, 'reason': string, 'confidence': float }. Ensure the 'reason' is professional and explains why it was approved or rejected based on the name match."
-                    }
+                    {"type": "text", "text": user_prompt}
                 ]
             }
         ]
 
         for doc_type, path in files.items():
             base64_image = encode_image(path)
-            messages[0]["content"].append({
+            messages[1]["content"].append({
                 "type": "image_url",
                 "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"}
             })
@@ -107,10 +125,15 @@ class VerificationPipeline:
                 model="gpt-4o",
                 messages=messages,
                 response_format={"type": "json_object"},
-                max_tokens=500
+                max_tokens=1000,
+                temperature=0.0
             )
             
-            result = json.loads(response.choices[0].message.content)
+            content = response.choices[0].message.content
+            if not content:
+                raise ValueError("OpenAI returned an empty response content.")
+                
+            result = json.loads(content)
             
             # Format for pipeline compatibility
             return {
@@ -121,11 +144,16 @@ class VerificationPipeline:
                 "checks": [{"rule": "Name Match (Global)", "pass": result.get("approved"), "reason": result.get("reason")}]
             }
         except Exception as e:
-            print(f"Vision API Error: {e}")
+            print(f"Vision API Error: {str(e)}")
+            # If the API fails, return the fallback/error state instead of crashing
             return {
                 "approved": False,
                 "reason": f"AI Verification Failed: {str(e)}",
-                "extractions": {},
+                "extractions": {
+                    "aadhaar": {"name": "FAILED", "id_number": "FAILED"},
+                    "pan": {"name": "FAILED", "id_number": "FAILED"},
+                    "utility_bill": {"name": "FAILED", "id_number": "FAILED"}
+                },
                 "consistency": [],
                 "checks": [{"rule": "AI Processing", "pass": False, "reason": str(e)}]
             }
