@@ -86,55 +86,110 @@ def generate_pdf_report(report_data, output_path):
     pdf = FPDF()
     pdf.add_page()
     
-    # Header
-    pdf.set_font("helvetica", "B", 24)
-    pdf.set_text_color(255, 77, 0) # VerifAI Orange
-    pdf.cell(0, 20, "VERIFAI REPORT", ln=True, align="C")
+    # Dark Background for Header
+    pdf.set_fill_color(10, 10, 10)
+    pdf.rect(0, 0, 210, 50, "F")
     
-    pdf.set_font("helvetica", "B", 12)
+    # Header
+    pdf.set_font("helvetica", "B", 30)
+    pdf.set_text_color(255, 77, 0) # VerifAI Orange
+    pdf.set_xy(10, 15)
+    pdf.cell(0, 15, "VERIFAI", ln=True, align="L")
+    
+    pdf.set_font("helvetica", "B", 10)
+    pdf.set_text_color(150, 150, 150)
+    pdf.set_xy(10, 28)
+    pdf.cell(0, 10, "AI-POWERED KYC + AML DOCUMENT VERIFICATION", ln=True, align="L")
+    
+    # Decision Badge on Header
+    decision = str(report_data.get('decision')).upper()
+    if decision == "APPROVED":
+        pdf.set_fill_color(0, 255, 0)
+        pdf.set_text_color(0, 0, 0)
+    else:
+        pdf.set_fill_color(255, 0, 0)
+        pdf.set_text_color(255, 255, 255)
+        
+    pdf.set_xy(150, 18)
+    pdf.set_font("helvetica", "B", 14)
+    pdf.cell(50, 12, decision, ln=True, align="C", fill=True)
+    
+    # Report Metadata
     pdf.set_text_color(0, 0, 0)
-    pdf.cell(0, 10, f"ID: {report_data.get('id', 'N/A')}", ln=True)
-    pdf.cell(0, 10, f"DECISION: {report_data.get('decision')}", ln=True)
-    pdf.cell(0, 10, f"DATE: {report_data.get('created_at', 'N/A')}", ln=True)
+    pdf.set_xy(10, 60)
+    pdf.set_font("helvetica", "B", 10)
+    pdf.cell(100, 10, f"REPORT ID: {report_data.get('id', 'N/A')}", ln=False)
+    pdf.cell(0, 10, f"GENERATED ON: {report_data.get('created_at', 'N/A')}", ln=True, align="R")
+    
     pdf.ln(10)
     
+    # Section Styling Helper
+    def add_section_header(title):
+        pdf.set_font("helvetica", "B", 14)
+        pdf.set_text_color(255, 77, 0)
+        pdf.cell(0, 10, title, ln=True)
+        pdf.set_draw_color(255, 77, 0)
+        pdf.line(pdf.get_x(), pdf.get_y(), pdf.get_x() + 190, pdf.get_y())
+        pdf.ln(5)
+        pdf.set_text_color(0, 0, 0)
+
     # Reasoning Trace
-    pdf.set_font("helvetica", "B", 16)
-    pdf.cell(0, 10, "REASONING TRACE", ln=True)
-    pdf.set_font("helvetica", "", 10)
+    add_section_header("EXECUTIVE SUMMARY & REASONING")
+    pdf.set_font("helvetica", "", 11)
     for reason in report_data.get("reasons", []):
-        pdf.multi_cell(0, 8, f"- {reason}")
+        pdf.set_font("helvetica", "B", 11)
+        pdf.cell(15, 8, "[ANALYSIS]", ln=False)
+        pdf.set_font("helvetica", "", 11)
+        pdf.multi_cell(0, 8, f"{reason}")
     pdf.ln(10)
     
     # Stage 1: Forensics
-    pdf.set_font("helvetica", "B", 16)
-    pdf.cell(0, 10, "STAGE 1: FORENSICS & TAMPER ANALYSIS", ln=True)
+    add_section_header("STAGE 1: FORENSICS & TAMPER ANALYSIS")
+    pdf.set_font("helvetica", "B", 10)
+    pdf.cell(60, 10, "DOCUMENT SOURCE", 1, 0, "C")
+    pdf.cell(60, 10, "FORENSIC STATUS", 1, 0, "C")
+    pdf.cell(70, 10, "RESULT", 1, 1, "C")
+    
     pdf.set_font("helvetica", "", 10)
     for t in report_data.get("stage_outputs", {}).get("tamper", []):
+        doc = str(t.get('document')).upper()
         status = "TAMPERED" if t.get("tamper") else "CLEAN"
-        pdf.cell(0, 8, f"{t.get('document').upper()}: {status}", ln=True)
+        result = "FAIL" if t.get("tamper") else "PASS"
+        pdf.cell(60, 10, doc, 1, 0, "C")
+        pdf.cell(60, 10, status, 1, 0, "C")
+        pdf.cell(70, 10, result, 1, 1, "C")
     pdf.ln(10)
     
     # Stage 2: AI Extraction
-    pdf.set_font("helvetica", "B", 16)
-    pdf.cell(0, 10, "STAGE 2: MULTI-MODAL AI EXTRACTION", ln=True)
-    pdf.set_font("helvetica", "", 10)
+    add_section_header("STAGE 2: MULTI-MODAL AI EXTRACTION")
     for doc, info in report_data.get("stage_outputs", {}).get("extraction", {}).items():
+        pdf.set_fill_color(245, 245, 245)
+        pdf.set_font("helvetica", "B", 11)
+        pdf.cell(0, 10, f"SOURCE: {doc.upper()}", ln=True, fill=True)
+        
         pdf.set_font("helvetica", "B", 10)
-        pdf.cell(0, 8, f"Source: {doc.upper()}", ln=True)
+        pdf.cell(40, 8, "FIELD", 1, 0, "C")
+        pdf.cell(150, 8, "EXTRACTED VALUE", 1, 1, "C")
+        
         pdf.set_font("helvetica", "", 10)
-        pdf.cell(0, 8, f"Name: {info.get('name')}", ln=True)
-        pdf.cell(0, 8, f"ID: {info.get('id_number')}", ln=True)
-        pdf.ln(2)
-    pdf.ln(10)
+        pdf.cell(40, 8, "NAME", 1, 0, "L")
+        pdf.cell(150, 8, str(info.get('name')), 1, 1, "L")
+        pdf.cell(40, 8, "ID NUMBER", 1, 0, "L")
+        pdf.cell(150, 8, str(info.get('id_number')), 1, 1, "L")
+        pdf.ln(5)
+    pdf.ln(5)
     
-    # Stage 3-4: Regulatory & AML Checks
-    pdf.set_font("helvetica", "B", 16)
-    pdf.cell(0, 10, "STAGE 3-4: REGULATORY & AML CHECKS", ln=True)
+    # Stage 3-4: Regulatory
+    add_section_header("STAGE 3-4: REGULATORY & AML COMPLIANCE")
+    pdf.set_font("helvetica", "B", 10)
+    pdf.cell(120, 10, "COMPLIANCE RULE", 1, 0, "C")
+    pdf.cell(70, 10, "STATUS", 1, 1, "C")
+    
     pdf.set_font("helvetica", "", 10)
     for c in report_data.get("checks", []):
         status = "COMPLIANT" if c.get("pass") else "VIOLATION"
-        pdf.cell(0, 8, f"{c.get('rule')}: {status}", ln=True)
+        pdf.cell(120, 10, str(c.get('rule')), 1, 0, "L")
+        pdf.cell(70, 10, status, 1, 1, "C")
         
     pdf.output(output_path)
     return output_path
