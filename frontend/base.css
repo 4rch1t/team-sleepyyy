@@ -205,10 +205,65 @@ td {
     color: #555;
 }
 
-.divider::before, .divider::after {
-    content: "";
-    flex: 1;
-    height: 1px;
-    background: #333;
-    margin: 0 10px;
+/* Stage Card Enhancement */
+.stage-card {
+    background: #0a0a0a;
+    border-left: 5px solid var(--accent-color);
+    padding: 25px;
+    margin-bottom: 20px;
+}
+
+.stage-card h3 {
+    font-size: 0.9rem;
+    color: #888;
+    margin-bottom: 20px;
+}
+
+.data-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 12px 0;
+    border-bottom: 1px solid #1a1a1a;
+    font-size: 0.9rem;
+}
+
+.data-label {
+    color: #555;
+    text-transform: uppercase;
+    font-weight: bold;
+}
+
+.data-value {
+    color: #fff;
+    font-family: 'Courier New', Courier, monospace;
+}
+
+.stat-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+    margin-top: 40px;
+}
+
+.stat-box {
+    background: var(--secondary-color);
+    border: 1px solid #333;
+    padding: 25px;
+    text-align: left;
+}
+
+.stat-val {
+    font-size: 2.5rem;
+    font-weight: 900;
+    color: var(--accent-color);
+    display: block;
+    line-height: 1;
+    margin-bottom: 10px;
+}
+
+.stat-label {
+    font-size: 0.7rem;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 1px;
 }
