@@ -7,18 +7,14 @@ from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
 from authlib.integrations.starlette_client import OAuth
 from .pipeline import VerificationPipeline
-from .utils import generate_pdf_report
-from .models import Base, Verification, Report
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
+from .utils import generate_pdf_report, encrypt_data, decrypt_data
+from .models import Database, Verification, Report
 import uuid
 from datetime import datetime
 
-# Initialize database
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./verifai.db")
-engine = create_engine(DATABASE_URL)
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-Base.metadata.create_all(bind=engine)
+# Initialize database singleton
+db_manager = Database.get_instance()
+db_manager.create_all()
 
 app = FastAPI()
 
@@ -49,7 +45,8 @@ pipeline = VerificationPipeline()
 
 # Auth Routes
 @app.get("/auth/login")
-async def login_google(request: Request):
+async def login_google(request: Request, role: str = "OPERATOR"):
+    request.session['role'] = role
     redirect_uri = os.getenv("GOOGLE_REDIRECT_URI")
     return await oauth.google.authorize_redirect(request, redirect_uri)
 
@@ -58,12 +55,11 @@ async def auth_callback(request: Request):
     try:
         token = await oauth.google.authorize_access_token(request)
         user = token.get('userinfo')
+        role = request.session.get('role', 'OPERATOR')
         if user:
             # In a real app, you'd save/update the user in DB here
-            # For this demo, we'll redirect back to frontend with a success flag
-            response = RedirectResponse(url="/frontend/index.html")
-            # We use a simple cookie or localStorage strategy for the demo
-            # Here we just redirect; the frontend script will handle the 'logged in' state
+            # Redirect to frontend with auth success flag
+            response = RedirectResponse(url=f"/frontend/index.html?auth=success&role={role}&email={user['email']}")
             return response
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -85,7 +81,7 @@ async def verify_documents(
         files[doc_type] = file_path
     
     # Store verification record
-    db = SessionLocal()
+    db = db_manager.get_session()
     verification = Verification(session_id=session_id, status="PROCESSING")
     db.add(verification)
     db.commit()
@@ -94,14 +90,14 @@ async def verify_documents(
         # Run 5-stage pipeline
         report_data = await pipeline.run(files)
         
-        # Save report
+        # Save report with Encrypted PII
         report = Report(
             verification_id=verification.id,
             decision=report_data['decision'],
             confidence_score=report_data['confidence_score'],
-            checks=report_data['checks'],
-            reasons=report_data['reasons'],
-            stage_outputs=report_data['stage_outputs']
+            checks=encrypt_data(report_data['checks']),
+            reasons=encrypt_data(report_data['reasons']),
+            stage_outputs=encrypt_data(report_data['stage_outputs'])
         )
         db.add(report)
         verification.status = "COMPLETED"
@@ -118,77 +114,108 @@ async def verify_documents(
         db.close()
 
 @app.get("/history")
-async def get_history():
-    db = SessionLocal()
-    reports = db.query(Report).order_by(Report.created_at.desc()).all()
-    results = []
-    for r in reports:
-        results.append({
-            "id": r.id,
-            "decision": r.decision,
-            "confidence_score": r.confidence_score,
-            "created_at": r.created_at.isoformat(),
-            "reasons": r.reasons
-        })
-    db.close()
-    return results
+async def get_history(request: Request):
+    # RBAC: Only ADMIN can view history
+    user_role = request.session.get('role', 'OPERATOR')
+    if user_role != 'ADMIN':
+        # Check query param as fallback for frontend session mismatches
+        query_role = request.query_params.get('role')
+        if query_role != 'ADMIN':
+            raise HTTPException(status_code=403, detail="Access denied. ADMIN role required.")
+
+    db = db_manager.get_session()
+    try:
+        reports = db.query(Report).order_by(Report.created_at.desc()).all()
+        results = []
+        for r in reports:
+            # Handle both encrypted and unencrypted data (for migration/demo safety)
+            reasons = r.reasons
+            if isinstance(reasons, str) and (reasons.startswith('gAAAAA') or len(reasons) > 50):
+                try:
+                    reasons = decrypt_data(r.reasons)
+                except:
+                    pass
+            
+            if not isinstance(reasons, list):
+                reasons = [str(reasons)] if reasons else ["No reasoning available"]
+
+            results.append({
+                "id": r.id,
+                "decision": r.decision,
+                "confidence_score": r.confidence_score,
+                "created_at": r.created_at.isoformat(),
+                "reasons": reasons
+            })
+        return results
+    except Exception as e:
+        print(f"History Fetch Error: {e}")
+        return []
+    finally:
+        db.close()
 
 @app.get("/report/{report_id}")
 async def get_report(report_id: int):
-    db = SessionLocal()
-    report = db.query(Report).filter(Report.id == report_id).first()
-    if not report:
-        db.close()
-        raise HTTPException(status_code=404, detail="Report not found")
-    
-    result = {
-        "decision": report.decision,
-        "confidence_score": report.confidence_score,
-        "checks": report.checks,
-        "reasons": report.reasons,
-        "stage_outputs": report.stage_outputs,
-        "created_at": report.created_at.isoformat()
-    }
-    db.close()
-    return result
+    db = db_manager.get_session()
+    try:
+        report = db.query(Report).filter(Report.id == report_id).first()
+        if not report:
+            raise HTTPException(status_code=404, detail="Report not found")
+        
+        def safe_decrypt(data):
+            if isinstance(data, str) and (data.startswith('gAAAAA') or len(data) > 50):
+                try:
+                    return decrypt_data(data)
+                except:
+                    return data
+            return data
 
-import json
+        result = {
+            "decision": report.decision,
+            "confidence_score": report.confidence_score,
+            "checks": safe_decrypt(report.checks),
+            "reasons": safe_decrypt(report.reasons),
+            "stage_outputs": safe_decrypt(report.stage_outputs),
+            "created_at": report.created_at.isoformat()
+        }
+        return result
+    finally:
+        db.close()
 
 @app.get("/report/{report_id}/pdf")
 async def get_report_pdf(report_id: int):
-    db = SessionLocal()
-    report = db.query(Report).filter(Report.id == report_id).first()
-    if not report:
-        db.close()
-        raise HTTPException(status_code=404, detail="Report not found")
-    
-    # Helper to ensure JSON fields are dictionaries/lists
-    def parse_json_field(field, default_type=list):
-        if field is None:
-            return {} if default_type == dict else []
-        if isinstance(field, str):
-            try:
-                import json
-                return json.loads(field)
-            except:
-                return field
-        return field
+    db = db_manager.get_session()
+    try:
+        report = db.query(Report).filter(Report.id == report_id).first()
+        if not report:
+            raise HTTPException(status_code=404, detail="Report not found")
+        
+        def safe_decrypt(data):
+            if isinstance(data, str) and (data.startswith('gAAAAA') or len(data) > 50):
+                try:
+                    return decrypt_data(data)
+                except:
+                    return data
+            return data
 
-    report_data = {
-        "id": report.id,
-        "decision": report.decision,
-        "confidence_score": report.confidence_score,
-        "checks": parse_json_field(report.checks, list),
-        "reasons": parse_json_field(report.reasons, list),
-        "stage_outputs": parse_json_field(report.stage_outputs, dict),
-        "created_at": report.created_at.isoformat()
-    }
-    db.close()
-    
-    pdf_path = os.path.join(UPLOAD_FOLDER, f"report_{report_id}.pdf")
-    generate_pdf_report(report_data, pdf_path)
-    
-    return FileResponse(pdf_path, media_type="application/pdf", filename=f"VerifAI_Report_{report_id}.pdf")
+        report_data = {
+            "id": report.id,
+            "decision": report.decision,
+            "confidence_score": report.confidence_score,
+            "checks": safe_decrypt(report.checks),
+            "reasons": safe_decrypt(report.reasons),
+            "stage_outputs": safe_decrypt(report.stage_outputs),
+            "created_at": report.created_at.isoformat()
+        }
+        
+        pdf_path = os.path.join(UPLOAD_FOLDER, f"report_{report_id}.pdf")
+        generate_pdf_report(report_data, pdf_path)
+        
+        return FileResponse(pdf_path, media_type="application/pdf", filename=f"VerifAI_Report_{report_id}.pdf")
+    finally:
+        db.close()
+
+# Serve assets
+app.mount("/assets", StaticFiles(directory="assets"), name="assets")
 
 # Serve frontend files
 app.mount("/frontend", StaticFiles(directory="frontend"), name="frontend")

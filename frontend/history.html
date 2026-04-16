@@ -2,55 +2,87 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>VERIFAI - HISTORY</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VERIFAI - LEDGER_HISTORY</title>
+    <link rel="icon" type="image/jpeg" href="/assets/logo.jpeg">
     <link rel="stylesheet" href="base.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;900&display=swap" rel="stylesheet">
     <script>
+        // Auth check
         if (localStorage.getItem('isLoggedIn') !== 'true') {
             window.location.href = "login.html";
         }
     </script>
 </head>
 <body>
-    <nav class="nav">
-        <a href="index.html" class="logo">VERIFAI</a>
-        <div class="nav-links">
-            <a href="index.html">PROCESS</a>
-            <a href="history.html">HISTORY</a>
-            <a href="#" onclick="logout()">LOGOUT</a>
-        </div>
-    </nav>
+    <div class="app-wrapper">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header" style="text-align: center; margin-bottom: 30px;">
+                <a href="index.html" class="logo">
+                    <img src="/assets/logo.jpeg" alt="VerifAI Logo" style="height: 100px; width: auto; border-radius: 8px;">
+                </a>
+            </div>
 
-    <div class="container">
-        <section class="hero" style="padding: 60px 0;">
-            <span class="system-path">/ROOT/SYSTEM/ARCHIVE</span>
-            <h1 style="font-size: 4rem;">VERIFICATION_LOGS</h1>
-            <p style="color:#888; text-transform:uppercase; font-size:0.7rem; letter-spacing:3px; margin-top: 10px;">HISTORICAL EVIDENCE DATABASE</p>
-        </section>
-        
-        <div class="box" style="border-color: rgba(255, 77, 0, 0.2);">
-            <table id="history-table">
-                <thead>
-                    <tr>
-                        <th>DATE</th>
-                        <th>DECISION</th>
-                        <th>REASONS</th>
-                        <th>ACTIONS</th>
-                    </tr>
-                </thead>
-                <tbody id="history-body">
-                    <!-- Data populated via JS -->
-                </tbody>
-            </table>
-        </div>
+            <div class="operator-block">
+                <span class="operator-status">OPERATOR_LOGGED_IN</span>
+                <span class="operator-id">SYS_ADMIN_0824</span>
+            </div>
+
+            <nav class="nav-menu">
+                <a href="index.html" class="nav-item">
+                    <span style="margin-right: 15px;">01</span> DASHBOARD
+                </a>
+                <a href="history.html" class="nav-item active">
+                    <span style="margin-right: 15px;">02</span> LEDGER_HISTORY
+                </a>
+            </nav>
+
+            <div class="sidebar-footer">
+                <a href="#" onclick="logout()" class="nav-item" style="padding: 0; color: var(--accent-color);">
+                    TERMINATE_SESSION_
+                </a>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="dashboard-header">
+                <div class="header-meta">
+                    <span class="system-path">/ROOT/SYSTEM/ARCHIVE/v2.1</span>
+                    <h1 style="font-size: 3.5rem;">LEDGER_HISTORY</h1>
+                </div>
+                <div class="header-stats">
+                    <div class="stat-box" style="text-align: right;">
+                        <span style="display:block; font-size: 0.6rem; color: #555; font-weight: 900;">TOTAL_RECORDS</span>
+                        <span style="font-family: monospace; color: var(--accent-color);" id="total-count">...</span>
+                    </div>
+                </div>
+            </header>
+
+            <section>
+                <div class="box" style="border-color: rgba(255, 77, 0, 0.2); padding: 0;">
+                    <table class="stream-table">
+                        <thead>
+                            <tr>
+                                <th width="15%">TIMESTAMP</th>
+                                <th width="15%">DECISION</th>
+                                <th width="45%">REASONING_PREVIEW</th>
+                                <th width="10%">CONFIDENCE</th>
+                                <th width="15%">ACTIONS</th>
+                            </tr>
+                        </thead>
+                        <tbody id="history-body">
+                            <!-- Data populated via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
     </div>
 
     <script>
         const API_URL = "http://localhost:8000";
-
-        // Protocol check
-        if (window.location.protocol === 'file:') {
-            window.location.href = "http://localhost:8000/";
-        }
 
         function logout() {
             localStorage.removeItem('isLoggedIn');
@@ -59,20 +91,40 @@
 
         async function fetchHistory() {
             try {
+                const urlParams = new URLSearchParams(window.location.search);
+                const highlightId = urlParams.get('id');
+                
                 const response = await fetch(`${API_URL}/history`);
                 const data = await response.json();
                 const tbody = document.getElementById('history-body');
+                const countSpan = document.getElementById('total-count');
                 
+                countSpan.innerText = data.length.toString().padStart(4, '0');
+                
+                const getStatusBadge = (decision) => {
+                    const status = decision || 'REJECTED';
+                    return `<span class="badge ${status}" style="border-color: currentColor;">${status}</span>`;
+                };
+
                 tbody.innerHTML = data.map(r => `
-                    <tr>
-                        <td style="font-size:0.8rem; color:#888;">${new Date(r.created_at).toLocaleString()}</td>
-                        <td><span class="badge ${r.decision}">${r.decision}</span></td>
-                        <td style="font-size:0.8rem; color:#ccc;">${r.reasons.slice(0, 2).join(', ')}${r.reasons.length > 2 ? '...' : ''}</td>
+                    <tr class="${highlightId == r.id ? 'highlight-row' : ''}" id="report-${r.id}">
+                        <td style="font-size:0.75rem; color:#888;">${new Date(r.created_at).toLocaleString()}</td>
+                        <td>${getStatusBadge(r.decision)}</td>
+                        <td style="font-family: monospace; font-size: 0.7rem;">${(r.reasons || []).join(' | ').substring(0, 100)}...</td>
+                        <td style="font-family: monospace; color: var(--accent-color);">${(r.confidence_score || 0).toFixed(1)}%</td>
                         <td>
-                            <button class="btn btn-outline" style="padding:5px 10px; font-size:0.6rem;" onclick="window.location.href='${API_URL}/report/${r.id}/pdf'">PDF</button>
+                            <div style="display:flex; gap:10px;">
+                                <button class="btn" style="padding:5px 10px; font-size:0.6rem;" onclick="window.location.href='index.html?view=${r.id}'">VIEW</button>
+                                <button class="btn btn-outline" style="padding:5px 10px; font-size:0.6rem; border-color:var(--accent-color); color:var(--accent-color);" onclick="window.location.href='${API_URL}/report/${r.id}/pdf'">PDF</button>
+                            </div>
                         </td>
                     </tr>
                 `).join('');
+
+                if (highlightId) {
+                    const el = document.getElementById(`report-${highlightId}`);
+                    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
             } catch (err) {
                 console.error('History Error:', err);
             }

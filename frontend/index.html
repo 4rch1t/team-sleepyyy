@@ -2,14 +2,20 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>VERIFAI - UPLOAD</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VERIFAI - FORENSIC_LEDGER</title>
+    <link rel="icon" type="image/jpeg" href="/assets/logo.jpeg">
     <link rel="stylesheet" href="base.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;900&display=swap" rel="stylesheet">
     <script>
-        // Check if coming back from OAuth
+        // Check if coming from OAuth redirect
         const urlParams = new URLSearchParams(window.location.search);
-        if (window.location.pathname.includes('index.html')) {
-            // For the demo, being on index.html after redirect counts as logged in
+        if (urlParams.get('auth') === 'success') {
             localStorage.setItem('isLoggedIn', 'true');
+            if (urlParams.get('role')) localStorage.setItem('userRole', urlParams.get('role'));
+            if (urlParams.get('email')) localStorage.setItem('userEmail', urlParams.get('email'));
+            // Clean up the URL
+            window.history.replaceState({}, document.title, window.location.pathname);
         }
 
         // Auth check
@@ -19,78 +25,251 @@
     </script>
 </head>
 <body>
-    <nav class="nav">
-        <a href="index.html" class="logo">VERIFAI</a>
-        <div class="nav-links">
-            <a href="index.html">PROCESS</a>
-            <a href="history.html">HISTORY</a>
-            <a href="#" onclick="logout()">LOGOUT</a>
-        </div>
-    </nav>
+    <div class="app-wrapper">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header" style="text-align: center; margin-bottom: 30px;">
+                <a href="index.html" class="logo">
+                    <img src="/assets/logo.jpeg" alt="VerifAI Logo" style="height: 100px; width: auto; border-radius: 8px;">
+                </a>
+            </div>
 
-    <div class="container">
-        <section class="hero" style="padding: 60px 0;">
-            <span class="system-path">/ROOT/SYSTEM/SCAN_ENGINE</span>
-            <h1 style="font-size: 4rem;">EVIDENCE_SCAN</h1>
-            <p style="color:#888; text-transform:uppercase; font-size:0.7rem; letter-spacing:3px; margin-top: 10px;">AUTHORIZED SCANNING PROTOCOL ACTIVE</p>
-        </section>
-        
-        <div class="box" style="margin-top:20px; border-color: rgba(255, 77, 0, 0.3);">
-            <form id="upload-form">
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px;">
-                    <div class="form-group">
-                        <label>AADHAAR_DOCUMENT</label>
-                        <input type="file" name="aadhaar" required>
+            <div class="operator-block">
+                <span class="operator-status">OPERATOR_LOGGED_IN</span>
+                <span class="operator-id" id="display-user-id">SYS_ADMIN_0824</span>
+                <span class="operator-role" id="display-user-role" style="display:block; font-size: 0.6rem; color: var(--accent-color); margin-top: 5px; font-weight: 900;">ROLE: OPERATOR</span>
+            </div>
+
+            <nav class="nav-menu">
+                <a href="index.html" class="nav-item active">
+                    <span style="margin-right: 15px;">01</span> DASHBOARD
+                </a>
+                <a href="history.html" class="nav-item" id="nav-history">
+                    <span style="margin-right: 15px;">02</span> LEDGER_HISTORY
+                </a>
+            </nav>
+
+            <div class="sidebar-footer">
+                <a href="#" onclick="logout()" class="nav-item" style="padding: 0; color: var(--accent-color);">
+                    TERMINATE_SESSION_
+                </a>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="dashboard-header">
+                <div class="header-meta">
+                    <span class="system-path">/ROOT/SYSTEM/DASHBOARD_v4.2</span>
+                    <h1 style="font-size: 3.5rem;">FORENSIC_LEDGER</h1>
+                </div>
+                <div class="header-stats">
+                    <div class="stat-box" style="text-align: right;">
+                        <span style="display:block; font-size: 0.6rem; color: #555; font-weight: 900;">SYSTEM_UPTIME</span>
+                        <span style="font-family: monospace; color: var(--accent-color);">99.982%</span>
                     </div>
+                    <div class="stat-box" style="text-align: right;">
+                        <span style="display:block; font-size: 0.6rem; color: #555; font-weight: 900;">LATENCY_AVG</span>
+                        <span style="font-family: monospace; color: var(--accent-color);">142ms</span>
+                    </div>
+                </div>
+            </header>
+
+
+            <!-- Upload Engine Section -->
+            <section style="margin-bottom: 60px;">
+                <div style="display:flex; justify-content: space-between; align-items: flex-end; margin-bottom: 20px;">
+                    <h2 style="font-size: 1.2rem;">EVIDENCE_SCAN_INPUT</h2>
+                    <span style="font-size: 0.6rem; color: #555;">[ PROTOCOL: MULTI_MODAL_GPT4o ]</span>
+                </div>
+                
+                <div class="box" style="border-color: rgba(255, 77, 0, 0.3); padding: 30px;">
+                    <form id="upload-form">
+                        <div class="upload-grid">
+                            <!-- Aadhaar -->
+                            <div class="upload-zone" id="zone-aadhaar">
+                                <input type="file" name="aadhaar" required accept="image/*" onchange="handleFileSelect(this, 'aadhaar')">
+                                <div class="upload-content">
+                                    <div class="upload-icon">01</div>
+                                    <div class="upload-label">AADHAAR_ID</div>
+                                </div>
+                                <div class="preview-container">
+                                    <img class="preview-image" id="preview-aadhaar">
+                                    <div class="preview-overlay">DOCUMENT_LOADED_OK</div>
+                                </div>
+                            </div>
+
+                            <!-- PAN -->
+                            <div class="upload-zone" id="zone-pan">
+                                <input type="file" name="pan" required accept="image/*" onchange="handleFileSelect(this, 'pan')">
+                                <div class="upload-content">
+                                    <div class="upload-icon">02</div>
+                                    <div class="upload-label">PAN_CARD</div>
+                                </div>
+                                <div class="preview-container">
+                                    <img class="preview-image" id="preview-pan">
+                                    <div class="preview-overlay">DOCUMENT_LOADED_OK</div>
+                                </div>
+                            </div>
+
+                            <!-- Utility Bill -->
+                            <div class="upload-zone" id="zone-utility_bill">
+                                <input type="file" name="utility_bill" required accept="image/*" onchange="handleFileSelect(this, 'utility_bill')">
+                                <div class="upload-content">
+                                    <div class="upload-icon">03</div>
+                                    <div class="upload-label">UTILITY_BILL</div>
+                                </div>
+                                <div class="preview-container">
+                                    <img class="preview-image" id="preview-utility_bill">
+                                    <div class="preview-overlay">DOCUMENT_LOADED_OK</div>
+                                </div>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary" id="submit-btn" style="width: 100%; margin-top: 10px;">INITIATE_FORENSIC_PIPELINE</button>
+                    </form>
                     
-                    <div class="form-group">
-                        <label>PAN_DOCUMENT</label>
-                        <input type="file" name="pan" required>
+                    <div id="loading" style="display:none; margin-top:20px; text-align: center;">
+                        <span class="system-path" style="animation: pulse 1s infinite;">ANALYZING_DATA_STREAMS...</span>
+                        <div style="width: 100%; height: 2px; background: #111; margin-top: 10px; overflow: hidden;">
+                            <div id="progress-bar" style="width: 30%; height: 100%; background: var(--accent-color); transition: width 0.3s;"></div>
+                        </div>
                     </div>
                 </div>
-                
-                <div class="form-group">
-                    <label>UTILITY_BILL_EVIDENCE</label>
-                    <input type="file" name="utility_bill" required>
-                </div>
-                
-                <button type="submit" class="btn btn-primary" id="submit-btn" style="width: 100%; letter-spacing: 2px;">INITIATE_PIPELINE</button>
-            </form>
-            
-            <div id="loading" style="display:none; margin-top:20px; font-weight:bold; color:var(--accent-color);">
-                ANALYZING DOCUMENTS... [TAMPER | EXTRACT | CONSISTENCY | RULES | SCORE]
-            </div>
-        </div>
 
-        <div id="result-container" style="display:none;">
-            <div class="box">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-                    <h2 style="margin:0;">VERIFICATION RESULT</h2>
-                    <button id="download-pdf-btn" class="btn btn-outline" style="padding:10px 20px; font-size:0.7rem; display:none;">DOWNLOAD PDF REPORT</button>
-                </div>
-                <div id="decision-badge" class="badge">PENDING</div>
-                
-                <div id="reasons-box" style="margin-top:30px; border-top: 1px solid #333; padding-top:20px;">
-                    <h3 style="font-size:0.8rem; color:#888;">REASONING TRACE:</h3>
-                    <ul id="reasons-list" style="list-style:none; padding:0; margin-top:10px;"></ul>
-                </div>
-            </div>
+                <!-- Result Container -->
+                <div id="result-container" style="display:none; margin-top: 40px;">
+                    <div class="box" style="border-left: 10px solid var(--accent-color);">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                            <div>
+                                <span class="system-path">VERIFICATION_REPORT_v1.0</span>
+                                <h2 style="margin:0; font-size: 2.5rem;" id="decision-title">RESULT_PENDING</h2>
+                                <div id="confidence-display" style="margin-top: 5px; font-family: monospace; color: var(--accent-color); font-weight: 900;">CONFIDENCE: --%</div>
+                            </div>
+                            <button id="download-pdf-btn" class="btn btn-outline" style="padding:15px 30px;">GENERATE_PDF_LEDGER</button>
+                        </div>
+                        
+                        <div id="reasons-box" style="margin-top:30px; border-top: 1px solid #333; padding-top:20px;">
+                            <h3 style="font-size:0.8rem; color:#888;">AI_REASONING_ENGINE:</h3>
+                            <ul id="reasons-list" style="list-style:none; padding:0; margin-top:10px;"></ul>
+                        </div>
+                    </div>
 
-            <div id="stage-breakdown"></div>
-        </div>
+                    <div id="stage-breakdown" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;"></div>
+                </div>
+            </section>
+
+            <!-- Recent Stream -->
+            <section>
+                <div style="display:flex; justify-content: space-between; align-items: flex-end; margin-bottom: 20px;">
+                    <h2 style="font-size: 1.2rem;">RECENT_EVIDENCE_STREAM</h2>
+                    <a href="history.html" style="font-size: 0.65rem; color: var(--accent-color); text-decoration: none; font-weight: 900;">VIEW_FULL_LEDGER -></a>
+                </div>
+                
+                <table class="stream-table">
+                    <thead>
+                        <tr>
+                            <th width="15%">TIMESTAMP</th>
+                            <th width="40%">REASONING_PREVIEW</th>
+                            <th width="15%">CONFIDENCE</th>
+                            <th width="15%">STATUS</th>
+                            <th width="15%">ACTION</th>
+                        </tr>
+                    </thead>
+                    <tbody id="stream-body">
+                        <!-- Populated by JS -->
+                    </tbody>
+                </table>
+            </section>
+        </main>
     </div>
+
+    <style>
+        @keyframes pulse {
+            0% { opacity: 0.4; }
+            50% { opacity: 1; }
+            100% { opacity: 0.4; }
+        }
+    </style>
 
     <script>
         const API_URL = "http://localhost:8000";
 
-        // Protocol check
-        if (window.location.protocol === 'file:') {
-            window.location.href = "http://localhost:8000/";
+        function handleFileSelect(input, type) {
+            const file = input.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const preview = document.getElementById(`preview-${type}`);
+                    const zone = document.getElementById(`zone-${type}`);
+                    preview.src = e.target.result;
+                    zone.classList.add('has-file');
+                }
+                reader.readAsDataURL(file);
+            }
         }
+
+        // Add drag and drop listeners
+        document.querySelectorAll('.upload-zone').forEach(zone => {
+            zone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                zone.classList.add('dragover');
+            });
+
+            zone.addEventListener('dragleave', () => {
+                zone.classList.remove('dragover');
+            });
+
+            zone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                zone.classList.remove('dragover');
+                const file = e.dataTransfer.files[0];
+                if (file && file.type.startsWith('image/')) {
+                    const input = zone.querySelector('input[type="file"]');
+                    const dataTransfer = new DataTransfer();
+                    dataTransfer.items.add(file);
+                    input.files = dataTransfer.files;
+                    handleFileSelect(input, input.name);
+                }
+            });
+        });
 
         function logout() {
             localStorage.removeItem('isLoggedIn');
             window.location.href = "login.html";
+        }
+
+        // Fetch recent history for the stream
+        async function loadStream() {
+            try {
+                const userRole = localStorage.getItem('userRole') || 'OPERATOR';
+                const response = await fetch(`${API_URL}/history?role=${userRole}`);
+                if (!response.ok) {
+                    if (response.status === 403) {
+                        document.getElementById('stream-body').innerHTML = '<tr><td colspan="5" style="text-align:center; color:#555;">[ RESTRICTED_ACCESS: ADMIN_ONLY ]</td></tr>';
+                        return;
+                    }
+                    throw new Error('History fetch failed');
+                }
+                const data = await response.json();
+                const streamBody = document.getElementById('stream-body');
+                
+                // Show only last 5
+                streamBody.innerHTML = data.slice(0, 5).map(item => `
+                    <tr>
+                        <td>${new Date(item.created_at).toLocaleTimeString()}</td>
+                        <td style="font-family: monospace;">${item.reasons[0].substring(0, 60)}...</td>
+                        <td>${(item.confidence_score * 100).toFixed(1)}%</td>
+                        <td><span class="status-badge ${item.decision}" style="border-color: currentColor;">${item.decision}</span></td>
+                        <td><button onclick="viewReport(${item.id})" class="btn" style="padding: 5px 10px; font-size: 0.6rem;">VIEW</button></td>
+                    </tr>
+                `).join('');
+            } catch (err) {
+                console.error("Stream load error", err);
+            }
+        }
+
+        function viewReport(id) {
+            window.location.href = `history.html?id=${id}`;
         }
 
         document.getElementById('upload-form').addEventListener('submit', async (e) => {
@@ -99,10 +278,19 @@
             const submitBtn = document.getElementById('submit-btn');
             const loading = document.getElementById('loading');
             const resultContainer = document.getElementById('result-container');
+            const progressBar = document.getElementById('progress-bar');
             
             submitBtn.disabled = true;
             loading.style.display = 'block';
             resultContainer.style.display = 'none';
+            
+            // Mock progress animation
+            let progress = 0;
+            const interval = setInterval(() => {
+                progress += Math.random() * 15;
+                if (progress > 95) progress = 95;
+                progressBar.style.width = `${progress}%`;
+            }, 500);
 
             try {
                 const response = await fetch(`${API_URL}/verify`, {
@@ -111,28 +299,35 @@
                 });
                 
                 const data = await response.json();
+                clearInterval(interval);
+                progressBar.style.width = '100%';
                 displayResult(data);
+                loadStream(); // Refresh stream
             } catch (err) {
                 alert('System Error: ' + err.message);
+                clearInterval(interval);
             } finally {
                 submitBtn.disabled = false;
-                loading.style.display = 'none';
+                setTimeout(() => { loading.style.display = 'none'; }, 500);
             }
         });
 
         function displayResult(data) {
             const container = document.getElementById('result-container');
-            const badge = document.getElementById('decision-badge');
+            const title = document.getElementById('decision-title');
+            const confidenceDisplay = document.getElementById('confidence-display');
             const reasonsList = document.getElementById('reasons-list');
             const breakdown = document.getElementById('stage-breakdown');
-            
             const downloadBtn = document.getElementById('download-pdf-btn');
             
             container.style.display = 'block';
-            badge.innerText = data.decision;
-            badge.className = `badge ${data.decision}`;
+            title.innerText = data.decision;
+            title.className = data.decision;
             
-            // Setup Download PDF
+            // Show certainty score
+            const score = data.confidence_score || 0;
+            confidenceDisplay.innerText = `CONFIDENCE: ${score.toFixed(1)}%`;
+            
             if (data.id) {
                 downloadBtn.style.display = 'block';
                 downloadBtn.onclick = () => {
@@ -141,38 +336,28 @@
             }
             
             reasonsList.innerHTML = data.reasons.map(r => `<li style="margin-bottom:12px; color:#ddd; font-size:0.9rem;">
-                <span style="color:var(--accent-color); margin-right:10px;">[WARN]</span>${r}
+                <span style="color:var(--accent-color); margin-right:10px;">[INFO]</span>${r}
             </li>`).join('');
             
             let html = '';
             
-            // Tamper Stage
-            html += `<div class="stage-card"><h3>STAGE 1: FORENSICS & TAMPER ANALYSIS</h3>`;
+            // Forensics
+            html += `<div class="stage-card"><h3>STAGE_01_FORENSICS</h3>`;
             data.stage_outputs.tamper.forEach(t => {
                 html += `<div class="data-row">
                     <span class="data-label">${t.document}</span> 
-                    <span class="${t.tampered ? 'REJECTED' : 'APPROVED'}">${t.tampered ? 'DETECTION POSITIVE' : 'PASSED ELA'}</span>
+                    <span class="${t.tampered ? 'REJECTED' : 'APPROVED'}" style="font-weight:900;">${t.tampered ? 'TAMPER_DETECTED' : 'ELA_PASSED'}</span>
                 </div>`;
             });
             html += `</div>`;
             
-            // Extraction Stage
-            html += `<div class="stage-card"><h3>STAGE 2: MULTI-MODAL AI EXTRACTION</h3>`;
+            // OCR
+            html += `<div class="stage-card"><h3>STAGE_02_EXTRACTION</h3>`;
             Object.entries(data.stage_outputs.extraction).forEach(([doc, info]) => {
-                html += `<div style="margin-bottom:20px; border-bottom:1px solid #222; padding-bottom:10px;">
-                    <div class="data-row"><span class="data-label">SOURCE</span><span class="data-value">${doc.toUpperCase()}</span></div>
+                html += `<div style="margin-bottom:15px;">
+                    <span class="system-path" style="font-size:0.5rem;">${doc.toUpperCase()}</span>
                     <div class="data-row"><span class="data-label">NAME</span><span class="data-value">${info.name}</span></div>
                     <div class="data-row"><span class="data-label">ID</span><span class="data-value">${info.id_number}</span></div>
-                </div>`;
-            });
-            html += `</div>`;
-            
-            // Rules
-            html += `<div class="stage-card"><h3>STAGE 3-4: REGULATORY & AML CHECKS</h3>`;
-            data.checks.forEach(c => {
-                html += `<div class="data-row">
-                    <span class="data-label">${c.rule}</span> 
-                    <span class="${c.pass ? 'APPROVED' : 'REJECTED'}">${c.pass ? 'COMPLIANT' : 'VIOLATION'}</span>
                 </div>`;
             });
             html += `</div>`;
@@ -180,6 +365,41 @@
             breakdown.innerHTML = html;
             container.scrollIntoView({ behavior: 'smooth' });
         }
+
+        // Initial load
+        const userRole = localStorage.getItem('userRole') || 'OPERATOR';
+        const userEmail = localStorage.getItem('userEmail') || 'sys_admin@verifai.io';
+        
+        document.getElementById('display-user-id').innerText = userEmail.split('@')[0].toUpperCase();
+        document.getElementById('display-user-role').innerText = `ROLE: ${userRole}`;
+        
+        // RBAC: Only ADMIN can see LEDGER_HISTORY
+        if (userRole !== 'ADMIN') {
+            document.getElementById('nav-history').style.display = 'none';
+        }
+
+        loadStream();
+        
+        // Check if viewing a specific report
+        async function checkViewParam() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const viewId = urlParams.get('view');
+            if (viewId) {
+                try {
+                    const response = await fetch(`${API_URL}/report/${viewId}`);
+                    if (response.ok) {
+                        const data = await response.json();
+                        data.id = parseInt(viewId);
+                        displayResult(data);
+                        // Also hide the upload form for better focus if desired
+                        // document.getElementById('upload-form').parentElement.style.display = 'none';
+                    }
+                } catch (err) {
+                    console.error("Error loading report:", err);
+                }
+            }
+        }
+        checkViewParam();
     </script>
 </body>
 </html>

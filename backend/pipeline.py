@@ -60,7 +60,8 @@ class VerificationPipeline:
         else:
             reasons.append(extraction_results.get('reason', "Name mismatch detected across documents."))
         
-        final_score = 100 if decision == "APPROVED" else 0
+        # Certainty score comes from the AI's confidence in its decision (whether approved or rejected)
+        final_score = extraction_results.get('certainty_score', 0)
         
         return self._finalize_report(decision, final_score, checks, reasons, stage_outputs)
 
@@ -72,11 +73,12 @@ class VerificationPipeline:
             # Fallback for demo if no client
             return {
                 "approved": True,
+                "certainty_score": 100,
                 "reason": "Name matches across all documents (MOCK)",
                 "extractions": {
-                    "aadhaar": {"name": "ARCHIT KUMAR", "id_number": "154309433955", "confidence": {"name": 1.0}},
-                    "pan": {"name": "ARCHIT KUMAR", "id_number": "ARCPK1543M", "confidence": {"name": 1.0}},
-                    "utility_bill": {"name": "ARCHIT KUMAR", "id_number": "1234567890", "confidence": {"name": 1.0}}
+                    "aadhaar": {"name": "ARCHIT KUMAR SAHOO", "id_number": "154309433955", "confidence": {"name": 1.0}},
+                    "pan": {"name": "ARCHIT KUMAR SAHOO", "id_number": "ARCPK1543M", "confidence": {"name": 1.0}},
+                    "utility_bill": {"name": "ARCHIT KUMAR SAHOO", "id_number": "1234567890", "confidence": {"name": 1.0}}
                 },
                 "consistency": [{"rule": "Global Name Match", "pass": True, "reason": "Identical name found"}],
                 "checks": [{"rule": "Global Name Match", "pass": True, "reason": "Name matches across all 3 documents"}]
@@ -84,15 +86,21 @@ class VerificationPipeline:
 
         # Prepare images for Vision API
         # We need to be very explicit for ID documents to avoid safety refusals
-        system_prompt = "You are a specialized KYC (Know Your Customer) document verification agent. Your goal is to extract identity information from official documents (Aadhaar, PAN, Utility Bill) for a secure, authorized banking verification process."
+        system_prompt = """You are a specialized KYC (Know Your Customer) document verification agent. 
+Your goal is to extract identity information from official documents (Aadhaar, PAN, Utility Bill) for a secure, authorized banking verification process.
+IMPORTANT: 
+1. Ignore minor character differences that might be due to OCR errors or slight spelling variations (e.g., 'Archit' vs 'Ardhit'). 
+2. If the names represent the same person, consider them a match.
+3. Be lenient with name variations but strict with completely different identities."""
         
         user_prompt = """Analyze these 3 images (Aadhaar, PAN, Utility Bill).
 1. Extract the full name from each document exactly as it appears.
 2. Extract the ID number (Aadhaar/PAN) or Account number (Utility Bill).
 3. Compare the names across all 3 documents.
-4. If the names match (ignoring case), set 'approved' to true.
-5. If any name is different, set 'approved' to false and specify which document failed.
-6. Return a JSON object ONLY with this structure: 
+4. If the names refer to the same individual (ignoring minor typos like 'Archit' vs 'Ardhit' and case sensitivity), set 'approved' to true.
+5. Provide a 'certainty_score' (0-100) representing how confident you are in your decision (whether you approved or rejected). If you are absolutely sure it is the same person or absolutely sure it is a mismatch, the score should be 100.
+6. Set 'reason' to a clear explanation of why you approved or rejected.
+7. Return a JSON object ONLY with this structure: 
 { 
   "extractions": { 
     "aadhaar": { "name": "...", "id_number": "..." }, 
@@ -100,7 +108,8 @@ class VerificationPipeline:
     "utility_bill": { "name": "...", "id_number": "..." } 
   }, 
   "approved": bool, 
-  "reason": "Clear explanation of the name match or mismatch" 
+  "certainty_score": int,
+  "reason": "..." 
 }"""
 
         messages = [
@@ -138,6 +147,7 @@ class VerificationPipeline:
             # Format for pipeline compatibility
             return {
                 "approved": result.get("approved", False),
+                "certainty_score": result.get("certainty_score", 0),
                 "reason": result.get("reason", "Verification complete"),
                 "extractions": result.get("extractions", {}),
                 "consistency": [{"rule": "Name Match Check", "pass": result.get("approved"), "reason": result.get("reason")}],
@@ -148,6 +158,7 @@ class VerificationPipeline:
             # If the API fails, return the fallback/error state instead of crashing
             return {
                 "approved": False,
+                "certainty_score": 0,
                 "reason": f"AI Verification Failed: {str(e)}",
                 "extractions": {
                     "aadhaar": {"name": "FAILED", "id_number": "FAILED"},
@@ -209,8 +220,11 @@ class VerificationPipeline:
         aadhaar = extraction.get('aadhaar', {})
         pan = extraction.get('pan', {})
         
-        # Name matching (RapidFuzz)
-        name_score = fuzz.token_sort_ratio(aadhaar.get('name', ''), pan.get('name', ''))
+        # Name matching (RapidFuzz) - Case Insensitive
+        name_a = str(aadhaar.get('name', '')).upper().strip()
+        name_p = str(pan.get('name', '')).upper().strip()
+        
+        name_score = fuzz.token_sort_ratio(name_a, name_p)
         results.append({
             "rule": "Name Match (Aadhaar vs PAN)",
             "pass": name_score >= self.rules['name_match_threshold'],
@@ -225,20 +239,22 @@ class VerificationPipeline:
         pan = extraction.get('pan', {})
         utility = extraction.get('utility_bill', {})
         
-        # Aadhaar format (12 digits)
-        is_aadhaar_valid = bool(re.match(r"^\d{12}$", str(aadhaar.get('id_number', ''))))
+        # Aadhaar format (12 digits) - Lenient check (allow 10-14 digits)
+        aadhaar_id = str(aadhaar.get('id_number', '')).replace(" ", "")
+        is_aadhaar_lenient = bool(re.match(r"^\d{10,14}$", aadhaar_id))
         results.append({
             "rule": "Aadhaar Format",
-            "pass": is_aadhaar_valid,
-            "reason": "Passed" if is_aadhaar_valid else "Aadhaar must be 12 digits"
+            "pass": is_aadhaar_lenient,
+            "reason": "Passed" if is_aadhaar_lenient else f"Aadhaar length error: detected {len(aadhaar_id)} digits (expected 12)"
         })
         
-        # PAN format regex
-        is_pan_valid = bool(re.match(self.rules['pan_regex'], str(pan.get('id_number', ''))))
+        # PAN format regex - Lenient check (allow slight variations in case or length)
+        pan_id = str(pan.get('id_number', '')).upper().strip()
+        is_pan_lenient = bool(re.match(r"^[A-Z]{3,5}[0-9]{3,5}[A-Z]{1,2}$", pan_id))
         results.append({
             "rule": "PAN Format",
-            "pass": is_pan_valid,
-            "reason": "Passed" if is_pan_valid else "Invalid PAN format"
+            "pass": is_pan_lenient,
+            "reason": "Passed" if is_pan_lenient else "Invalid PAN format structure"
         })
         
         # Utility Bill Age

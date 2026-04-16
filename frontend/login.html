@@ -3,14 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <title>VERIFAI - LOGIN</title>
+    <link rel="icon" type="image/jpeg" href="/assets/logo.jpeg">
     <link rel="stylesheet" href="base.css">
 </head>
 <body>
     <div class="login-container">
-        <h1 class="logo" style="font-size: 3rem; margin-bottom: 40px;">VERIFAI</h1>
+        <div style="margin-bottom: 40px;">
+            <img src="/assets/logo.jpeg" alt="VerifAI Logo" style="height: 100px; width: auto; border-radius: 8px;">
+        </div>
         
         <div class="box">
-            <h2 style="margin-bottom: 30px;">AUTHENTICATION</h2>
+            <h2 style="margin-bottom: 10px;">AUTHENTICATION</h2>
+            <p style="font-size: 0.65rem; color: #555; margin-bottom: 30px; font-weight: 900;">[ SELECT_ACCESS_CLEARANCE ]</p>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 25px;">
+                <button class="btn" id="role-operator" onclick="selectRole('OPERATOR')" style="font-size: 0.7rem; border-color: #333;">OPERATOR_L1</button>
+                <button class="btn" id="role-admin" onclick="selectRole('ADMIN')" style="font-size: 0.7rem; border-color: #333;">ADMIN_SYSTEM</button>
+            </div>
             
             <!-- Google Login -->
             <button class="google-btn" onclick="googleLogin()">
@@ -24,7 +33,7 @@
             <form id="login-form">
                 <div class="form-group" style="text-align: left;">
                     <label>EMAIL ADDRESS</label>
-                    <input type="email" placeholder="name@company.com" required>
+                    <input type="email" id="email" placeholder="name@company.com" required>
                 </div>
                 <div class="form-group" style="text-align: left;">
                     <label>PASSWORD</label>
@@ -42,6 +51,18 @@
 
     <script>
         const API_URL = "http://localhost:8000";
+        let selectedRole = 'OPERATOR';
+
+        function selectRole(role) {
+            selectedRole = role;
+            document.getElementById('role-operator').style.borderColor = role === 'OPERATOR' ? 'var(--accent-color)' : '#333';
+            document.getElementById('role-admin').style.borderColor = role === 'ADMIN' ? 'var(--accent-color)' : '#333';
+            document.getElementById('role-operator').style.color = role === 'OPERATOR' ? 'var(--accent-color)' : '#fff';
+            document.getElementById('role-admin').style.color = role === 'ADMIN' ? 'var(--accent-color)' : '#fff';
+        }
+
+        // Set initial state
+        selectRole('OPERATOR');
 
         // Protocol check
         if (window.location.protocol === 'file:') {
@@ -51,13 +72,16 @@
 
         function googleLogin() {
             // Redirect to backend auth endpoint
-            window.location.href = `${API_URL}/auth/login`;
+            window.location.href = `${API_URL}/auth/login?role=${selectedRole}`;
         }
 
         document.getElementById('login-form').addEventListener('submit', (e) => {
             e.preventDefault();
+            const email = document.getElementById('email').value;
             // Mock login for demo
             localStorage.setItem('isLoggedIn', 'true');
+            localStorage.setItem('userRole', selectedRole);
+            localStorage.setItem('userEmail', email);
             window.location.href = "index.html";
         });
     </script>

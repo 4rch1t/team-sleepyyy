@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  verifai-api:
+    build: .
+    container_name: verifai_api
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+      - ./uploads:/app/uploads
+      - verifai_data:/app/data
+    env_file:
+      - .env
+    environment:
+      - DATABASE_URL=sqlite:///./verifai.db
+      - UPLOAD_FOLDER_PATH=./uploads
+    restart: always
+
+volumes:
+  verifai_data:

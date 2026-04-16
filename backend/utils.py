@@ -57,18 +57,28 @@ def perform_ela(image_path, quality=90, scale=15):
 def get_fernet():
     key = os.getenv("ENCRYPTION_KEY")
     if not key:
-        key = Fernet.generate_key() # Fallback for demo
-    return Fernet(key)
+        # Static key for demo consistency across restarts if not in .env
+        key = b'pL1v5_9zQ6M3tY_6J5W7f8G9H0J1K2L3M4N5O6P7Q8R=' 
+    try:
+        return Fernet(key)
+    except:
+        return Fernet(Fernet.generate_key())
 
 def encrypt_data(data: dict) -> str:
+    if data is None: return ""
     f = get_fernet()
     json_data = json.dumps(data).encode()
     return f.encrypt(json_data).decode()
 
 def decrypt_data(token: str) -> dict:
-    f = get_fernet()
-    decrypted = f.decrypt(token.encode()).decode()
-    return json.loads(decrypted)
+    if not token: return {}
+    try:
+        f = get_fernet()
+        decrypted = f.decrypt(token.encode()).decode()
+        return json.loads(decrypted)
+    except Exception as e:
+        print(f"Decryption Error: {e}")
+        return {"error": "Decryption failed", "raw": token}
 
 # Config Loader
 def load_rules():
@@ -87,6 +97,18 @@ def generate_pdf_report(report_data, output_path):
         pdf = FPDF()
         pdf.add_page()
         
+        # Logo and Header - Enlarged Logo
+        # Using absolute path to ensure it's found regardless of execution context
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        project_root = os.path.dirname(current_dir)
+        logo_path = os.path.join(project_root, "assets", "logo.jpeg")
+        
+        if os.path.exists(logo_path):
+            pdf.image(logo_path, 10, 8, 30) # Bigger logo: 30mm width
+            header_offset = 45 # Increased offset for bigger logo
+        else:
+            header_offset = 10
+
         # Text cleaning helper to avoid FPDF encoding errors
         def clean_text(text):
             if text is None: return "N/A"
@@ -97,19 +119,22 @@ def generate_pdf_report(report_data, output_path):
         pdf.set_fill_color(10, 10, 10)
         pdf.rect(0, 0, 210, 50, "F")
         
-        # Header
+        # Header Title
         pdf.set_font("helvetica", "B", 30)
         pdf.set_text_color(255, 77, 0) # VerifAI Orange
-        pdf.set_xy(10, 15)
+        pdf.set_xy(header_offset, 15)
         pdf.cell(0, 15, "VERIFAI", ln=True, align="L")
         
+        # Header Subtitle
         pdf.set_font("helvetica", "B", 10)
         pdf.set_text_color(150, 150, 150)
-        pdf.set_xy(10, 28)
+        pdf.set_xy(header_offset, 28)
         pdf.cell(0, 10, "AI-POWERED KYC + AML DOCUMENT VERIFICATION", ln=True, align="L")
         
-        # Decision Badge on Header
+        # Decision Badge & Confidence on Header
         decision = str(report_data.get('decision', 'REJECTED')).upper()
+        confidence = report_data.get('confidence_score', 0)
+        
         if decision == "APPROVED":
             pdf.set_fill_color(0, 255, 0)
             pdf.set_text_color(0, 0, 0)
@@ -117,9 +142,14 @@ def generate_pdf_report(report_data, output_path):
             pdf.set_fill_color(255, 0, 0)
             pdf.set_text_color(255, 255, 255)
             
-        pdf.set_xy(150, 18)
+        pdf.set_xy(150, 15)
         pdf.set_font("helvetica", "B", 14)
         pdf.cell(50, 12, decision, ln=True, align="C", fill=True)
+        
+        pdf.set_xy(150, 28)
+        pdf.set_font("helvetica", "B", 10)
+        pdf.set_text_color(200, 200, 200)
+        pdf.cell(50, 10, f"CONFIDENCE: {confidence:.1f}%", ln=True, align="C")
         
         # Report Metadata
         pdf.set_text_color(0, 0, 0)
