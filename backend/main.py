@@ -164,8 +164,11 @@ async def get_report_pdf(report_id: int):
     
     # Helper to ensure JSON fields are dictionaries/lists
     def parse_json_field(field):
+        if field is None:
+            return {} if "outputs" in str(field) else []
         if isinstance(field, str):
             try:
+                import json
                 return json.loads(field)
             except:
                 return field

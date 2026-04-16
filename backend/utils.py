@@ -87,6 +87,12 @@ def generate_pdf_report(report_data, output_path):
         pdf = FPDF()
         pdf.add_page()
         
+        # Text cleaning helper to avoid FPDF encoding errors
+        def clean_text(text):
+            if text is None: return "N/A"
+            # Remove characters that might crash FPDF default fonts
+            return str(text).encode('latin-1', 'replace').decode('latin-1')
+        
         # Dark Background for Header
         pdf.set_fill_color(10, 10, 10)
         pdf.rect(0, 0, 210, 50, "F")
@@ -136,35 +142,43 @@ def generate_pdf_report(report_data, output_path):
 
         # 1. PERSONAL PROFILE SUMMARY
         add_section_header("1. PERSONAL PROFILE SUMMARY")
-        extraction = report_data.get("stage_outputs", {})
-        if isinstance(extraction, dict):
-            extraction = extraction.get("extraction", {})
-        else:
+        stage_outputs = report_data.get("stage_outputs", {})
+        if not isinstance(stage_outputs, dict):
+            stage_outputs = {}
+            
+        extraction = stage_outputs.get("extraction", {})
+        if not isinstance(extraction, dict):
             extraction = {}
             
         # Use Aadhaar as primary source for profile
-        profile_data = extraction.get("aadhaar", {}) or extraction.get("pan", {}) or {}
+        profile_data = extraction.get("aadhaar") or extraction.get("pan") or {}
+        if not isinstance(profile_data, dict):
+            profile_data = {}
         
         pdf.set_font("helvetica", "B", 11)
         pdf.cell(50, 10, "PRIMARY NAME:", ln=False)
         pdf.set_font("helvetica", "", 11)
-        pdf.cell(0, 10, str(profile_data.get("name", "N/A")), ln=True)
+        pdf.cell(0, 10, clean_text(profile_data.get("name")), ln=True)
         
         pdf.set_font("helvetica", "B", 11)
         pdf.cell(50, 10, "VERIFIED IDENTITY:", ln=False)
         pdf.set_font("helvetica", "", 11)
-        pdf.cell(0, 10, str(profile_data.get("id_number", "N/A")), ln=True)
+        pdf.cell(0, 10, clean_text(profile_data.get("id_number")), ln=True)
         
         pdf.ln(5)
 
         # 2. EXECUTIVE SUMMARY & REASONING
         add_section_header("2. AI REASONING & COMPLIANCE SUMMARY")
         pdf.set_font("helvetica", "", 11)
-        for reason in report_data.get("reasons", []):
+        reasons = report_data.get("reasons", [])
+        if not isinstance(reasons, list):
+            reasons = [str(reasons)] if reasons else []
+            
+        for reason in reasons:
             pdf.set_font("helvetica", "B", 11)
             pdf.cell(15, 8, "[ANALYSIS]", ln=False)
             pdf.set_font("helvetica", "", 11)
-            pdf.multi_cell(0, 8, f"{reason}")
+            pdf.multi_cell(0, 8, clean_text(reason))
         pdf.ln(5)
         
         # 3. STAGE 1: FORENSICS
@@ -175,19 +189,18 @@ def generate_pdf_report(report_data, output_path):
         pdf.cell(70, 10, "RESULT", 1, 1, "C")
         
         pdf.set_font("helvetica", "", 10)
-        tamper_data = report_data.get("stage_outputs", {})
-        if isinstance(tamper_data, dict):
-            tamper_data = tamper_data.get("tamper", [])
-        else:
+        tamper_data = stage_outputs.get("tamper", [])
+        if not isinstance(tamper_data, list):
             tamper_data = []
             
         for t in tamper_data:
+            if not isinstance(t, dict): continue
             doc = str(t.get('document', 'N/A')).upper()
             status = "TAMPERED" if t.get("tamper") else "CLEAN"
             result = "FAIL" if t.get("tamper") else "PASS"
-            pdf.cell(60, 10, doc, 1, 0, "C")
-            pdf.cell(60, 10, status, 1, 0, "C")
-            pdf.cell(70, 10, result, 1, 1, "C")
+            pdf.cell(60, 10, clean_text(doc), 1, 0, "C")
+            pdf.cell(60, 10, clean_text(status), 1, 0, "C")
+            pdf.cell(70, 10, clean_text(result), 1, 1, "C")
         pdf.ln(5)
         
         # 4. STAGE 2: MULTI-MODAL AI EXTRACTION
@@ -216,10 +229,15 @@ def generate_pdf_report(report_data, output_path):
         pdf.cell(70, 10, "STATUS", 1, 1, "C")
         
         pdf.set_font("helvetica", "", 10)
-        for c in report_data.get("checks", []):
+        checks = report_data.get("checks", [])
+        if not isinstance(checks, list):
+            checks = []
+            
+        for c in checks:
+            if not isinstance(c, dict): continue
             status = "COMPLIANT" if c.get("pass") else "VIOLATION"
-            pdf.cell(120, 10, str(c.get('rule', 'N/A')), 1, 0, "L")
-            pdf.cell(70, 10, status, 1, 1, "C")
+            pdf.cell(120, 10, clean_text(c.get('rule', 'N/A')), 1, 0, "L")
+            pdf.cell(70, 10, clean_text(status), 1, 1, "C")
             
         pdf.output(output_path)
         return output_path
