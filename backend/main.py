@@ -163,9 +163,9 @@ async def get_report_pdf(report_id: int):
         raise HTTPException(status_code=404, detail="Report not found")
     
     # Helper to ensure JSON fields are dictionaries/lists
-    def parse_json_field(field):
+    def parse_json_field(field, default_type=list):
         if field is None:
-            return {} if "outputs" in str(field) else []
+            return {} if default_type == dict else []
         if isinstance(field, str):
             try:
                 import json
@@ -178,9 +178,9 @@ async def get_report_pdf(report_id: int):
         "id": report.id,
         "decision": report.decision,
         "confidence_score": report.confidence_score,
-        "checks": parse_json_field(report.checks),
-        "reasons": parse_json_field(report.reasons),
-        "stage_outputs": parse_json_field(report.stage_outputs),
+        "checks": parse_json_field(report.checks, list),
+        "reasons": parse_json_field(report.reasons, list),
+        "stage_outputs": parse_json_field(report.stage_outputs, dict),
         "created_at": report.created_at.isoformat()
     }
     db.close()

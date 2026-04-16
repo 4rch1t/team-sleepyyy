@@ -176,9 +176,11 @@ def generate_pdf_report(report_data, output_path):
             
         for reason in reasons:
             pdf.set_font("helvetica", "B", 11)
-            pdf.cell(15, 8, "[ANALYSIS]", ln=False)
+            pdf.cell(30, 8, "[ANALYSIS]", ln=False)
             pdf.set_font("helvetica", "", 11)
-            pdf.multi_cell(0, 8, clean_text(reason))
+            # Use specific width instead of 0 to avoid space calculation errors
+            pdf.multi_cell(160, 8, clean_text(reason), ln=True)
+            pdf.ln(2)
         pdf.ln(5)
         
         # 3. STAGE 1: FORENSICS
