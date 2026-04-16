@@ -1,3 +1,5 @@
+<img width="921" height="731" alt="image" src="https://github.com/user-attachments/assets/31ddd741-9712-4fd3-9719-a737abbe1042" />
+
 # VerifAI — AI-Powered KYC + AML Document Verification for India
 
 VerifAI is an automated system designed to streamline the KYC (Know Your Customer) process for Indian financial institutions. It processes **Aadhaar**, **PAN**, and **Utility Bills** through a specialized 5-stage reasoning pipeline to provide explainable decisions.
