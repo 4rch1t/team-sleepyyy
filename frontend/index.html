@@ -5,6 +5,13 @@
     <title>VERIFAI - UPLOAD</title>
     <link rel="stylesheet" href="base.css">
     <script>
+        // Check if coming back from OAuth
+        const urlParams = new URLSearchParams(window.location.search);
+        if (window.location.pathname.includes('index.html')) {
+            // For the demo, being on index.html after redirect counts as logged in
+            localStorage.setItem('isLoggedIn', 'true');
+        }
+
         // Auth check
         if (localStorage.getItem('isLoggedIn') !== 'true') {
             window.location.href = "login.html";

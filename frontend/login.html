@@ -41,10 +41,11 @@
     </div>
 
     <script>
+        const API_URL = "http://localhost:8000";
+
         function googleLogin() {
-            // Placeholder for Google OAuth redirect
-            alert("Redirecting to Google OAuth...\n(Requires GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET)");
-            // window.location.href = "/auth/google";
+            // Redirect to backend auth endpoint
+            window.location.href = `${API_URL}/auth/login`;
         }
 
         document.getElementById('login-form').addEventListener('submit', (e) => {

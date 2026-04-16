@@ -11,3 +11,6 @@ cryptography
 PyYAML
 python-multipart
 aiofiles
+authlib
+httpx
+itsdangerous

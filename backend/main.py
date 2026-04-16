@@ -1,8 +1,11 @@
 import os
 import shutil
-from fastapi import FastAPI, UploadFile, File, Form, HTTPException
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.middleware.sessions import SessionMiddleware
+from authlib.integrations.starlette_client import OAuth
 from .pipeline import VerificationPipeline
 from .models import Base, Verification, Report
 from sqlalchemy import create_engine
@@ -18,7 +21,18 @@ Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 
-# CORS for frontend integration
+# OAuth Setup
+oauth = OAuth()
+oauth.register(
+    name='google',
+    client_id=os.getenv("GOOGLE_CLIENT_ID"),
+    client_secret=os.getenv("GOOGLE_CLIENT_SECRET"),
+    server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
+    client_kwargs={'scope': 'openid email profile'}
+)
+
+# Middleware
+app.add_middleware(SessionMiddleware, secret_key=os.getenv("SECRET_KEY"))
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -31,6 +45,27 @@ if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
 
 pipeline = VerificationPipeline()
+
+# Auth Routes
+@app.get("/auth/login")
+async def login_google(request: Request):
+    redirect_uri = os.getenv("GOOGLE_REDIRECT_URI")
+    return await oauth.google.authorize_redirect(request, redirect_uri)
+
+@app.get("/auth/callback")
+async def auth_callback(request: Request):
+    try:
+        token = await oauth.google.authorize_access_token(request)
+        user = token.get('userinfo')
+        if user:
+            # In a real app, you'd save/update the user in DB here
+            # For this demo, we'll redirect back to frontend with a success flag
+            response = RedirectResponse(url="/frontend/index.html")
+            # We use a simple cookie or localStorage strategy for the demo
+            # Here we just redirect; the frontend script will handle the 'logged in' state
+            return response
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 @app.post("/verify")
 async def verify_documents(
@@ -114,5 +149,9 @@ async def get_report(report_id: int):
     db.close()
     return result
 
-# Serve static files for frontend if needed
-# app.mount("/", StaticFiles(directory="frontend", html=True), name="frontend")
+# Serve frontend files
+app.mount("/frontend", StaticFiles(directory="frontend"), name="frontend")
+
+@app.get("/")
+async def root():
+    return RedirectResponse(url="/frontend/login.html")
