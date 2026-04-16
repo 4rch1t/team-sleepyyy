@@ -152,6 +152,8 @@ async def get_report(report_id: int):
     db.close()
     return result
 
+import json
+
 @app.get("/report/{report_id}/pdf")
 async def get_report_pdf(report_id: int):
     db = SessionLocal()
@@ -160,13 +162,22 @@ async def get_report_pdf(report_id: int):
         db.close()
         raise HTTPException(status_code=404, detail="Report not found")
     
+    # Helper to ensure JSON fields are dictionaries/lists
+    def parse_json_field(field):
+        if isinstance(field, str):
+            try:
+                return json.loads(field)
+            except:
+                return field
+        return field
+
     report_data = {
         "id": report.id,
         "decision": report.decision,
         "confidence_score": report.confidence_score,
-        "checks": report.checks,
-        "reasons": report.reasons,
-        "stage_outputs": report.stage_outputs,
+        "checks": parse_json_field(report.checks),
+        "reasons": parse_json_field(report.reasons),
+        "stage_outputs": parse_json_field(report.stage_outputs),
         "created_at": report.created_at.isoformat()
     }
     db.close()

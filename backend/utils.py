@@ -136,7 +136,12 @@ def generate_pdf_report(report_data, output_path):
 
         # 1. PERSONAL PROFILE SUMMARY
         add_section_header("1. PERSONAL PROFILE SUMMARY")
-        extraction = report_data.get("stage_outputs", {}).get("extraction", {})
+        extraction = report_data.get("stage_outputs", {})
+        if isinstance(extraction, dict):
+            extraction = extraction.get("extraction", {})
+        else:
+            extraction = {}
+            
         # Use Aadhaar as primary source for profile
         profile_data = extraction.get("aadhaar", {}) or extraction.get("pan", {}) or {}
         
@@ -170,7 +175,13 @@ def generate_pdf_report(report_data, output_path):
         pdf.cell(70, 10, "RESULT", 1, 1, "C")
         
         pdf.set_font("helvetica", "", 10)
-        for t in report_data.get("stage_outputs", {}).get("tamper", []):
+        tamper_data = report_data.get("stage_outputs", {})
+        if isinstance(tamper_data, dict):
+            tamper_data = tamper_data.get("tamper", [])
+        else:
+            tamper_data = []
+            
+        for t in tamper_data:
             doc = str(t.get('document', 'N/A')).upper()
             status = "TAMPERED" if t.get("tamper") else "CLEAN"
             result = "FAIL" if t.get("tamper") else "PASS"
