@@ -5,6 +5,9 @@ CREDITS FINISHED SO NO DEMO VIDEO, ONLY SCREENSHOTS, PPT AND FLOW CHART IS BELOW
 <img width="1915" height="910" alt="image" src="https://github.com/user-attachments/assets/42885ecc-b7f9-47d4-946d-00c4cb70d720" />
 <img width="1911" height="917" alt="image" src="https://github.com/user-attachments/assets/cbd0adaa-5220-4ebd-bdae-3d03a48c463c" />
 <img width="1919" height="923" alt="image" src="https://github.com/user-attachments/assets/c9011d03-d2a3-4747-8c54-3677c51c3bb5" />
+<img width="1902" height="916" alt="image" src="https://github.com/user-attachments/assets/db0d0255-e22d-4b9f-8bb9-083b7aac66c1" />
+<img width="657" height="863" alt="image" src="https://github.com/user-attachments/assets/d9b16f6a-4df9-4ddd-ae27-085d8119a416" />
+<img width="662" height="867" alt="image" src="https://github.com/user-attachments/assets/5da01cbb-579f-443d-bb12-0816e99a9c03" />
 <img width="430" height="537" alt="image" src="https://github.com/user-attachments/assets/21bd4933-7daf-402a-b4d5-8bfe0213cd7b" />
 <img width="988" height="855" alt="image" src="https://github.com/user-attachments/assets/09ce8072-b0a4-41b0-ad28-ec3f0efcc74b" />
 
