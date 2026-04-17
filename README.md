@@ -1,3 +1,5 @@
+<img width="1536" height="1024" alt="project flowcharts" src="https://github.com/user-attachments/assets/a22ad90d-0614-4a1e-ac62-154dced8175a" />
+
 <img width="1536" height="1024" alt="image" src="https://github.com/user-attachments/assets/c65bca46-6f57-4181-b6fb-d6b0d8a79cac" />
 <img width="1911" height="917" alt="image" src="https://github.com/user-attachments/assets/cbd0adaa-5220-4ebd-bdae-3d03a48c463c" />
 <img width="1919" height="923" alt="image" src="https://github.com/user-attachments/assets/c9011d03-d2a3-4747-8c54-3677c51c3bb5" />
