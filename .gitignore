@@ -1,0 +1,31 @@
+# Environment Variables
+.env
+.env.local
+
+# Database
+*.db
+*.sqlite3
+
+# Uploads and temporary files
+uploads/
+*_temp.jpg
+
+# Python cache and temporary files
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.coverage
+htmlcov/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Office Temp Files
+~$*.pptx
+~$*.docx
+~$*.xlsx
+
+# PowerPoint Export (Optional - keep if you want the final PPT on GitHub, remove if not)
+# VerifAI_Forensic_Overview.pptx
